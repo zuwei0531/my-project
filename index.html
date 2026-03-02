@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>專業工程估價單系統 - 終極穩定版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* 鎖定寬度防止 PC 格式跑掉 */
+        .table-cell-min { min-width: 100px; }
+        .table-cell-mid { min-width: 150px; }
+        .table-cell-small { min-width: 70px; }
+        
+        select, input { border: 1px solid #cbd5e1 !important; border-radius: 6px !important; padding: 6px !important; background-color: white; }
+        .sig-canvas { border: 2px dashed #e2e8f0; background-color: #f8fafc; cursor: crosshair; touch-action: none; width: 100%; height: 120px; }
+        
+        @media print {
+            .no-print { display: none !important; }
+            .bg-slate-800 { background-color: #1e293b !important; -webkit-print-color-adjust: exact; }
+            .text-white { color: white !important; -webkit-print-color-adjust: exact; }
+        }
+
+        tr { page-break-inside: avoid !important; }
+        .row-entry:hover { background-color: #f8fafc; }
+        
+        /* 訊息提示框樣式 */
+        #msg-box { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: none; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen py-4 md:py-8 font-sans text-slate-900">
+
+    <!-- 訊息提示 -->
+    <div id="msg-box" class="bg-indigo-600 text-white px-6 py-3 rounded-full shadow-2xl font-bold text-sm"></div>
+
+    <div id="quotation-content" class="max-w-6xl mx-auto bg-white shadow-2xl rounded-xl overflow-hidden border border-slate-200">
+        <!-- 表頭 -->
+        <div class="bg-slate-800 text-white p-6 md:p-8">
+            <div class="flex justify-between items-start">
+                <h1 class="text-2xl md:text-3xl font-bold">工程估價單</h1>
+                <div class="text-right text-xs md:text-sm text-slate-400">
+                    <p>報價日期：2026-03-02</p>
+                    <p>估價單號：20260302-01</p>
+                </div>
+            </div>
+            <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div class="space-y-3">
+                    <div class="flex items-center"><span class="w-20 text-slate-400">專案名稱</span><input type="text" id="project-name" placeholder="輸入名稱" class="bg-transparent border-b border-slate-600 focus:border-white outline-none flex-1 text-white"></div>
+                    <div class="flex items-center"><span class="w-20 text-slate-400">客戶姓名</span><input type="text" id="client-name" placeholder="輸入抬頭" class="bg-transparent border-b border-slate-600 focus:border-white outline-none flex-1 text-white"></div>
+                </div>
+                <div class="flex items-start"><span class="w-20 text-slate-400 pt-1">施工地址</span><textarea id="施工地址" rows="2" placeholder="輸入詳細施工地址" class="bg-transparent border-b border-slate-600 focus:border-white outline-none flex-1 resize-none text-white"></textarea></div>
+            </div>
+        </div>
+
+        <!-- 表格區域 -->
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-wider border-b">
+                        <th class="p-3 no-print w-12 text-center">新增</th>
+                        <th class="p-3 table-cell-min">工程類別</th>
+                        <th class="p-3 table-cell-small">樓層</th>
+                        <th class="p-3 table-cell-small">位置</th>
+                        <th class="p-3 table-cell-mid">項目說明</th>
+                        <th class="p-3 table-cell-small text-center">單位</th>
+                        <th class="p-3 table-cell-small text-center">數量</th>
+                        <th class="p-3 table-cell-min text-right">單價</th>
+                        <th class="p-3 table-cell-min text-right">小計</th>
+                        <th class="p-3 no-print w-10 text-center">刪</th>
+                    </tr>
+                </thead>
+                <tbody id="quotation-body">
+                    <!-- 錄入列 -->
+                    <tr id="draft-row" class="bg-indigo-50/50 border-b-2 border-indigo-200 no-print">
+                        <td class="p-3 text-center">
+                            <button onclick="commitAndNew()" class="w-9 h-9 bg-indigo-600 text-white rounded-full font-bold shadow active:scale-90">+</button>
+                        </td>
+                        <td class="p-1"><select id="d-category" onchange="updateSubItems()" class="w-full text-sm"></select></td>
+                        <td class="p-1"><select id="d-floor" class="w-full text-sm">
+                            <option value="1樓">1樓</option><option value="2樓">2樓</option><option value="3樓">3樓</option><option value="4樓">4樓</option><option value="5樓">5樓</option><option value="6樓">6樓</option><option value="地下室">地下室</option><option value="頂樓">頂樓</option><option value="樓梯間">樓梯間</option><option value="麒麟地">麒麟地</option>
+                        </select></td>
+                        <td class="p-1"><select id="d-location" class="w-full text-sm">
+                            <option value="無">無</option><option value="樓梯間">樓梯間</option><option value="天花板">天花板</option><option value="地板">地板</option><option value="牆面">牆面</option><option value="前">前</option><option value="中">中</option><option value="後">後</option><option value="上">上</option><option value="下">下</option>
+                        </select></td>
+                        <td class="p-1"><select id="d-item" onchange="updatePrice()" class="w-full text-sm"></select></td>
+                        <td class="p-1"><select id="d-unit" class="w-full text-[10px]">
+                            <option value="坪">坪</option><option value="m²">m²</option><option value="式">式</option><option value="尺">尺</option><option value="組">組</option><option value="車">車</option>
+                        </select></td>
+                        <td class="p-1"><input id="d-qty" type="number" value="1" oninput="calculateDraft()" class="w-full text-center text-sm"></td>
+                        <td class="p-1"><input id="d-price" type="number" value="0" oninput="calculateDraft()" class="w-full text-right font-bold text-indigo-700 text-sm"></td>
+                        <td id="d-total" class="p-3 text-right font-bold text-indigo-800 text-sm">0</td>
+                        <td></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 總計區 -->
+        <div class="bg-slate-50 p-6 border-t flex flex-col md:flex-row justify-between gap-6">
+            <div class="text-[11px] text-slate-400 md:w-1/2">
+                <p class="font-bold text-slate-500 mb-1">備註說明：</p>
+                <p>1. 本單價含基本施工與料件。 2. 管理費含現場監工。 3. 不含政府規費與鄰損鑑定。</p>
+            </div>
+            <div class="md:w-72 space-y-2 text-sm">
+                <div class="flex justify-between"><span>工程小計</span><span id="subtotal" class="font-bold text-slate-700">0</span></div>
+                <div class="flex justify-between"><span>管理維護(5%)</span><span id="management-fee" class="font-bold text-slate-700">0</span></div>
+                <div class="flex justify-between text-red-500"><span>營業稅(5%)</span><span id="tax-fee" class="font-bold">0</span></div>
+                <div class="flex justify-between pt-2 border-t-2 border-slate-200 text-lg font-black text-indigo-700"><span>總報價金額</span><span id="grand-total">0</span></div>
+            </div>
+        </div>
+
+        <!-- 簽章區 -->
+        <div class="p-6 md:p-10 grid grid-cols-1 md:grid-cols-2 gap-10 bg-slate-50/20 border-t">
+            <div>
+                <div class="flex justify-between mb-1"><span class="text-[10px] font-bold text-slate-400 uppercase">甲方簽署 (客戶)</span><button onclick="clearSig('sig-party-a')" class="no-print text-indigo-600 text-[10px] font-bold">清除</button></div>
+                <canvas id="sig-party-a" class="sig-canvas rounded-lg"></canvas>
+            </div>
+            <div>
+                <div class="flex justify-between mb-1"><span class="text-[10px] font-bold text-slate-400 uppercase">乙方簽署 (承包商)</span><button onclick="clearSig('sig-party-b')" class="no-print text-indigo-600 text-[10px] font-bold">清除</button></div>
+                <canvas id="sig-party-b" class="sig-canvas rounded-lg"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- 功能按鈕 -->
+    <div class="max-w-6xl mx-auto mt-6 flex flex-wrap justify-end gap-3 px-4 no-print pb-20">
+        <button onclick="exportExcel()" class="bg-emerald-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-emerald-700 transition active:scale-95 text-sm">導出 Excel</button>
+        <button onclick="handlePDF()" class="bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:bg-indigo-800 transition active:scale-95 text-sm">導出 PDF (終極修正版)</button>
+    </div>
+
+    <script>
+        const projectData = {
+            "保護工程": { "items": ["公設保護(電梯/走廊)", "室內地坪保護", "家具防塵套件"], "units": ["坪", "式"], "prices": [800, 600, 3500] },
+            "拆除工程": { "items": ["紅磚牆拆除", "磁磚剔除(牆/地)", "天花板拆除", "廢棄物清運費"], "units": ["坪", "車"], "prices": [2500, 1800, 1200, 9500] },
+            "泥作工程": { "items": ["牆面水泥粉光", "防水工程", "地磚舖貼", "牆面砌磚"], "units": ["坪", "m²"], "prices": [4500, 2500, 6500, 5500] },
+            "木作工程": { "items": ["矽酸鈣板平頂天花", "系統櫃(高櫃)", "造型電視牆", "木作隔間牆"], "units": ["坪", "尺"], "prices": [3800, 6500, 12000, 4500] },
+            "油漆工程": { "items": ["全室二底三面漆", "局部批土修補", "造型牆跳色費"], "units": ["坪", "m²"], "prices": [1500, 500, 2500] },
+            "水電工程": { "items": ["開關插座面板更新", "全室電路抽換", "燈具安裝(基本)", "冷熱水管遷移"], "units": ["組", "式", "處"], "prices": [850, 45000, 350, 3500] }
+        };
+
+        function showMsg(text) {
+            const b = document.getElementById('msg-box');
+            b.innerText = text; b.style.display = 'block';
+            setTimeout(() => b.style.display = 'none', 3000);
+        }
+
+        function init() {
+            const cat = document.getElementById('d-category');
+            cat.innerHTML = '<option value="">類別</option>';
+            Object.keys(projectData).forEach(c => cat.add(new Option(c, c)));
+            setupSignatures();
+        }
+
+        function updateSubItems() {
+            const cat = document.getElementById('d-category').value;
+            const item = document.getElementById('d-item');
+            item.innerHTML = '<option value="">選擇項目</option>';
+            if (projectData[cat]) projectData[cat].items.forEach((it, idx) => {
+                const opt = new Option(it, it);
+                opt.dataset.price = projectData[cat].prices[idx];
+                item.add(opt);
+            });
+            calculateDraft();
+        }
+
+        function updatePrice() {
+            const sel = document.getElementById('d-item');
+            const opt = sel.options[sel.selectedIndex];
+            if (opt && opt.dataset.price) document.getElementById('d-price').value = opt.dataset.price;
+            calculateDraft();
+        }
+
+        function calculateDraft() {
+            const q = parseFloat(document.getElementById('d-qty').value) || 0;
+            const p = parseFloat(document.getElementById('d-price').value) || 0;
+            document.getElementById('d-total').innerText = (q * p).toLocaleString();
+            calculateTotal();
+        }
+
+        function commitAndNew() {
+            const cat = document.getElementById('d-category').value;
+            const floor = document.getElementById('d-floor').value;
+            const loc = document.getElementById('d-location').value;
+            const item = document.getElementById('d-item').value;
+            if (!cat || !item) return;
+
+            const q = document.getElementById('d-qty').value;
+            const p = document.getElementById('d-price').value;
+            const u = document.getElementById('d-unit').value;
+            const total = (parseFloat(q) * parseFloat(p)).toLocaleString();
+
+            const row = document.createElement('tr');
+            row.className = "border-b text-sm row-entry transition-colors";
+            row.innerHTML = `
+                <td class="p-3 no-print text-center text-slate-300">●</td>
+                <td class="p-3 font-medium text-slate-600">${cat}</td>
+                <td class="p-3">${floor}</td>
+                <td class="p-3">${loc}</td>
+                <td class="p-3 text-slate-700">${item}</td>
+                <td class="p-3 text-center text-slate-500">${u}</td>
+                <td class="p-3 text-center">${q}</td>
+                <td class="p-3 text-right">${parseFloat(p).toLocaleString()}</td>
+                <td class="p-3 text-right font-bold text-slate-800 row-total">${total}</td>
+                <td class="p-3 no-print text-center"><button onclick="this.closest('tr').remove();calculateTotal();" class="text-slate-300 hover:text-red-500 font-bold">×</button></td>
+            `;
+            document.getElementById('quotation-body').insertBefore(row, document.getElementById('draft-row').nextSibling);
+            
+            // 重置
+            document.getElementById('d-category').value = ""; document.getElementById('d-item').innerHTML = "";
+            document.getElementById('d-qty').value = 1; document.getElementById('d-price').value = 0;
+            calculateDraft();
+        }
+
+        function calculateTotal() {
+            let sub = 0;
+            document.querySelectorAll('.row-total').forEach(el => sub += parseFloat(el.innerText.replace(/,/g, '')) || 0);
+            const mgt = Math.round(sub * 0.05); const tax = Math.round((sub + mgt) * 0.05);
+            document.getElementById('subtotal').innerText = sub.toLocaleString();
+            document.getElementById('management-fee').innerText = mgt.toLocaleString();
+            document.getElementById('tax-fee').innerText = tax.toLocaleString();
+            document.getElementById('grand-total').innerText = (sub + mgt + tax).toLocaleString();
+        }
+
+        function exportExcel() {
+            const projectName = document.getElementById('project-name').value || '工程估價單';
+            const data = [["類別", "樓層", "位置", "說明", "單位", "數量", "單價", "小計"]];
+            document.querySelectorAll('#quotation-body tr:not(#draft-row)').forEach(tr => {
+                const tds = tr.querySelectorAll('td');
+                data.push([tds[1].innerText, tds[2].innerText, tds[3].innerText, tds[4].innerText, tds[5].innerText, tds[6].innerText, tds[7].innerText, tds[8].innerText]);
+            });
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "估價單");
+            XLSX.writeFile(wb, `${projectName}.xlsx`);
+        }
+
+        // --- 終極修正：iPhone 下載與偏移解決方案 ---
+        async function handlePDF() {
+            const projectName = document.getElementById('project-name').value || '工程估價單';
+            const clientName = document.getElementById('client-name').value || '客戶';
+            const content = document.getElementById('quotation-content');
+            
+            showMsg("正在為 iPhone/Google Sites 優化排版...");
+
+            // 1. 強制將 Canvas 轉換為圖片（防止跨視窗遺失）
+            const canvases = content.querySelectorAll('canvas');
+            const sigImages = Array.from(canvases).map(c => c.toDataURL('image/png'));
+
+            // 2. 開啟一個完全獨立的新分頁，徹底脫離 Google Sites 的 Iframe 限制
+            const win = window.open('', '_blank');
+            if (!win) {
+                alert("彈出視窗被封鎖！請在 iPhone 設定中允許 Safari 彈出視窗，才能完成導出。");
+                return;
+            }
+
+            // 3. 在新視窗中構建純淨的 HTML
+            const html = `
+                <html>
+                <head>
+                    <title>${projectName}</title>
+                    <script src="https://cdn.tailwindcss.com"><\/script>
+                    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
+                    <style>
+                        body { background: #f1f5f9; padding: 20px; font-family: sans-serif; }
+                        .no-print, #draft-row { display: none !important; }
+                        #quotation-content { width: 800px !important; margin: 0 auto !important; background: white; box-shadow: none !important; }
+                        canvas { display: none; }
+                        .sig-img { border: 1px solid #eee; border-radius: 8px; width: 100%; height: 120px; object-fit: contain; }
+                    <\/style>
+                </head>
+                <body>
+                    <div id="capture-area">${content.outerHTML}<\/div>
+                    <script>
+                        window.onload = function() {
+                            const area = document.getElementById('capture-area');
+                            // 將之前的簽名圖片塞回去
+                            const sigImgs = ${JSON.stringify(sigImages)};
+                            const placeholders = area.querySelectorAll('canvas');
+                            placeholders.forEach((p, i) => {
+                                const img = document.createElement('img');
+                                img.src = sigImgs[i];
+                                img.className = 'sig-img';
+                                p.parentNode.replaceChild(img, p);
+                            });
+
+                            const opt = {
+                                margin: 0.3,
+                                filename: '${projectName}_${clientName}.pdf',
+                                image: { type: 'jpeg', quality: 1.0 },
+                                html2canvas: { scale: 3, useCORS: true, scrollY: 0 },
+                                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+                            };
+                            
+                            // 在新視窗中執行導出，不再受 Iframe 限制
+                            html2pdf().set(opt).from(area.querySelector('#quotation-content')).save().then(() => {
+                                setTimeout(() => window.close(), 3000);
+                            });
+                        };
+                    <\/script>
+                </body>
+                </html>
+            `;
+
+            win.document.write(html);
+            win.document.close();
+        }
+
+        function setupSignatures() {
+            ['sig-party-a', 'sig-party-b'].forEach(id => {
+                const canvas = document.getElementById(id);
+                const ctx = canvas.getContext('2d');
+                let drawing = false;
+                const ratio = window.devicePixelRatio || 1;
+                canvas.width = canvas.offsetWidth * ratio; canvas.height = canvas.offsetHeight * ratio;
+                ctx.scale(ratio, ratio);
+                ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#1e293b';
+                
+                const getPos = (e) => {
+                    const rect = canvas.getBoundingClientRect();
+                    const cx = (e.touches ? e.touches[0].clientX : e.clientX);
+                    const cy = (e.touches ? e.touches[0].clientY : e.clientY);
+                    return { x: cx - rect.left, y: cy - rect.top };
+                };
+                const start = (e) => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); if(e.touches) e.preventDefault(); };
+                const move = (e) => { if(!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); if(e.touches) e.preventDefault(); };
+                canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); window.addEventListener('mouseup', () => drawing = false);
+                canvas.addEventListener('touchstart', start, {passive:false}); canvas.addEventListener('touchmove', move, {passive:false}); canvas.addEventListener('touchend', () => drawing = false);
+            });
+        }
+        function clearSig(id) { 
+            const c = document.getElementById(id);
+            const ctx = c.getContext('2d');
+            const ratio = window.devicePixelRatio || 1;
+            ctx.clearRect(0, 0, canvas.width || 1000, canvas.height || 1000); // 粗略清除
+            setupSignatures(); // 重置以修復比例
+        }
+        window.onload = init;
+    </script>
+</body>
+</html>
