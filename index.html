@@ -283,7 +283,7 @@
             document.body.classList.add('pdf-exporting');
 
             const opt = {
-                margin:       [10, 5, 10, 5], // 上, 右, 下, 左 (稍微縮減左右邊距爭取空間)
+                margin:       [ 0, 5, 10, 5], // 上, 右, 下, 左 (稍微縮減左右邊距爭取空間)
                 filename:     `${quoteNo}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true }, 
@@ -432,3 +432,4 @@
     </script>
 </body>
 </html>
+
