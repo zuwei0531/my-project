@@ -271,13 +271,8 @@
             setTimeout(() => b.style.display = 'none', 3000);
         }
 
-        // ==========================================
-        // 匯出 PDF 功能：已改為 'portrait' (直向)
-        // ==========================================
         function exportToPDF() {
             showMsg("正在生成直向 PDF，請稍候...");
-
-            // 加入這行：強制網頁滾動回最頂部，避免截圖產生上方空白偏移 Bug
             window.scrollTo(0, 0);
             
             const element = document.getElementById('quotation-content');
@@ -286,13 +281,11 @@
             document.body.classList.add('pdf-exporting');
 
             const opt = {
-                margin:       [ 0, 5, 10, 5], // 上, 右, 下, 左 (稍微縮減左右邊距爭取空間)
+                margin:       [ 0, 5, 10, 5],
                 filename:     `${quoteNo}.pdf`,
                 image:        { type: 'jpeg', quality: 0.98 },
                 html2canvas:  { scale: 2, useCORS: true }, 
-                windowWidth: 800
-                    
-                // 這裡改成 portrait 直向
+                windowWidth: 800,
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' } 
             };
 
@@ -301,7 +294,6 @@
                 showMsg("直向 PDF 下載成功！");
             });
         }
-        // ==========================================
 
         function init() {
             document.getElementById('quote-date').valueAsDate = new Date();
@@ -437,6 +429,3 @@
     </script>
 </body>
 </html>
-
-
-
