@@ -3,75 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>工程估價單系統 - 專業美化進階版 (修正版)</title>
+    <title>工程估價單系統 - 最終修復版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; -webkit-print-color-adjust: exact !important; }
 
-        body { font-family: 'Noto Sans TC', sans-serif; }
-
-        input::-webkit-outer-spin-button,
-        input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
-
-        /* 自定義表格寬度 */
+        /* 鎖定表格欄位寬度，防止 PDF 文字斷裂 */
         .col-cat { width: 140px; }      
         .col-floor { width: 90px; }     
         .col-loc { width: 110px; }      
-        .col-desc { min-width: 250px; }  
+        .col-desc { min-width: 300px; }  
         .col-unit { width: 80px; }
         .col-qty { width: 80px; }
-        .col-price { width: 110px; }
-        .col-total { width: 130px; }
+        .col-price { width: 120px; }
+        .col-total { width: 140px; }
 
-        select, input, textarea { 
-            border: 1px solid #e2e8f0 !important; 
-            border-radius: 8px !important; 
-            padding: 8px 12px !important; 
-            background-color: white; 
-            outline: none;
-            font-size: 15px; 
-            transition: all 0.2s ease;
-        }
-        
-        input:focus, textarea:focus, select:focus {
-            border-color: #6366f1 !important;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-        }
+        /* 防止文字在 PDF 中換行 */
+        th, td { white-space: nowrap; word-break: keep-all; }
+        .col-desc { white-space: normal; } /* 僅項目說明允許換行 */
 
-        .sig-canvas { 
-            border: 2px dashed #cbd5e1; 
-            background-color: #f8fafc; 
-            cursor: crosshair; 
-            touch-action: none; 
-            width: 100%; 
-            height: 140px; 
-        }
+        select, input, textarea { border: 1px solid #e2e8f0 !important; border-radius: 8px !important; padding: 8px 12px !important; }
+        .sig-canvas { border: 2px dashed #cbd5e1; background-color: #f8fafc; width: 100%; height: 140px; }
         
-        /* PDF 導出專用優化 */
-        #quotation-content { min-width: 1100px; }
+        /* 導出時的容器寬度優化 */
+        #quotation-content { min-width: 1150px; }
 
         @media print {
-            .no-print, .toggle-btn, button { display: none !important; }
-            body { background: white !important; padding: 0 !important; }
-            .bg-slate-900 { background-color: #0f172a !important; -webkit-print-color-adjust: exact; }
+            .no-print, .action-col, button, .toggle-btn { display: none !important; }
             #quotation-content { box-shadow: none !important; border: none !important; width: 100% !important; margin: 0 !important; }
-            input, textarea, select { border: none !important; background: transparent !important; padding: 4px 0 !important; }
+            .bg-slate-900 { background-color: #0f172a !important; }
         }
 
-        .row-entry:hover { background-color: #f8fafc; }
         #msg-box { position: fixed; top: 24px; left: 50%; transform: translateX(-50%); z-index: 9999; display: none; }
-        
-        .toggle-btn { transition: all 0.2s; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; }
-        
-        .export-btn {
-            position: fixed; bottom: 30px; right: 30px;
-            background: #4f46e5; color: white;
-            padding: 16px 32px; border-radius: 16px;
-            font-weight: 900; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
-            z-index: 100; transition: all 0.3s;
-        }
-        .export-btn:hover { transform: translateY(-5px); background: #4338ca; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen py-6 md:py-12 text-slate-800">
@@ -79,48 +44,48 @@
     <div id="msg-box" class="bg-slate-900 text-white px-8 py-3 rounded-xl shadow-2xl font-medium text-sm animate-bounce"></div>
 
     <div id="quotation-content" class="max-w-7xl mx-auto bg-white shadow-xl rounded-2xl overflow-hidden border border-slate-200">
-        <div class="bg-slate-900 text-white p-8 md:p-10">
-            <div class="flex flex-col md:flex-row justify-between items-start gap-6">
+        <div class="bg-slate-900 text-white p-10">
+            <div class="flex justify-between items-start">
                 <div>
-                    <h1 class="text-4xl font-black tracking-tight mb-1">工程估價單</h1>
+                    <h1 class="text-4xl font-black mb-1">工程估價單</h1>
                     <div class="h-1 w-20 bg-indigo-500 rounded-full mb-4"></div>
-                    <p class="text-slate-400 text-xs font-medium uppercase tracking-[0.2em]">Professional Quotation</p>
+                    <p class="text-slate-400 text-xs tracking-[0.2em]">PROFESSIONAL QUOTATION</p>
                 </div>
-                <div class="w-full md:w-auto text-left md:text-right space-y-2">
-                    <div class="flex md:justify-end items-center gap-3 text-sm">
-                        <span class="text-slate-400 font-medium">報價日期</span>
-                        <input type="date" id="quote-date" class="bg-slate-800 border-none text-white py-1 px-3 rounded-lg">
+                <div class="text-right space-y-2">
+                    <div class="flex items-center gap-3 text-sm">
+                        <span class="text-slate-400">報價日期</span>
+                        <input type="date" id="quote-date" class="bg-slate-800 border-none text-white py-1 rounded-lg">
                     </div>
-                    <div class="flex md:justify-end items-center gap-3 text-sm">
-                        <span class="text-slate-400 font-medium">單據編號</span>
-                        <input type="text" id="quote-no" value="QT-20260303-01" class="bg-slate-800 border-none text-white py-1 px-3 rounded-lg text-right">
+                    <div class="flex items-center gap-3 text-sm">
+                        <span class="text-slate-400">單據編號</span>
+                        <input type="text" id="quote-no" value="QT-20260303-01" class="bg-slate-800 border-none text-white py-1 rounded-lg text-right">
                     </div>
                 </div>
             </div>
 
-            <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="mt-10 grid grid-cols-2 gap-8">
                 <div class="space-y-4">
                     <div class="flex flex-col gap-1">
-                        <label class="text-xs font-bold text-slate-500 ml-1">客戶名稱</label>
+                        <label class="text-xs font-bold text-slate-500 uppercase ml-1">客戶名稱</label>
                         <input type="text" id="client-name" placeholder="請輸入客戶名稱" class="bg-slate-800/50 border-none text-white">
                     </div>
                     <div class="flex flex-col gap-1">
-                        <label class="text-xs font-bold text-slate-500 ml-1">聯絡電話</label>
+                        <label class="text-xs font-bold text-slate-500 uppercase ml-1">聯絡電話</label>
                         <input type="text" id="client-phone" placeholder="請輸入聯絡電話" class="bg-slate-800/50 border-none text-white">
                     </div>
                 </div>
                 <div class="flex flex-col gap-1">
-                    <label class="text-xs font-bold text-slate-500 ml-1">施工地點 / 聯絡地址</label>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1">施工地點 / 聯絡地址</label>
                     <textarea id="client-address" rows="3" placeholder="請輸入詳細施工地址" class="bg-slate-800/50 border-none text-white resize-none h-full"></textarea>
                 </div>
             </div>
         </div>
 
         <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse min-w-[1100px]">
+            <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-slate-50 text-slate-600 text-[14px] font-black uppercase border-b border-slate-200">
-                        <th class="p-5 no-print w-16 text-center">操作</th>
+                    <tr class="bg-slate-50 text-slate-600 text-[14px] font-black border-b border-slate-200">
+                        <th class="p-5 no-print action-col w-16 text-center">操作</th>
                         <th class="p-5 col-cat">類別</th>
                         <th class="p-5 col-floor">樓層</th>
                         <th class="p-5 col-loc">位置</th>
@@ -129,60 +94,51 @@
                         <th class="p-5 col-qty text-center">數量</th>
                         <th class="p-5 col-price text-right">單價</th>
                         <th class="p-5 col-total text-right">金額小計</th>
-                        <th class="p-5 no-print w-10"></th>
                     </tr>
                 </thead>
                 <tbody id="quotation-body">
                     <tr id="draft-row" class="bg-indigo-50/30 border-b border-indigo-100 no-print">
                         <td class="p-3 text-center">
-                            <button onclick="commitAndNew()" class="w-10 h-10 bg-indigo-600 text-white rounded-full font-bold shadow-lg flex items-center justify-center mx-auto hover:bg-indigo-700">＋</button>
+                            <button onclick="commitAndNew()" class="w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center mx-auto hover:bg-indigo-700">＋</button>
                         </td>
                         <td class="p-2"><select id="d-category" onchange="updateSubItems()" class="w-full"></select></td>
-                        <td class="p-2"><select id="d-floor" class="w-full"><option value="1樓">1F</option><option value="2樓">2F</option><option value="3樓">3F</option><option value="B1">B1</option></select></td>
-                        <td class="p-2"><select id="d-location" class="w-full"><option value="客廳">客廳</option><option value="廚房">廚房</option><option value="浴室">浴室</option></select></td>
+                        <td class="p-2"><select id="d-floor" class="w-full"><option>1樓</option><option>2樓</option><option>3樓</option><option>B1</option></select></td>
+                        <td class="p-2"><select id="d-location" class="w-full"><option>客廳</option><option>廚房</option><option>浴室</option></select></td>
                         <td class="p-2"><select id="d-item" onchange="updatePrice()" class="w-full"></select></td>
-                        <td class="p-2"><select id="d-unit" class="w-full"><option value="式">式</option><option value="坪">坪</option><option value="組">組</option></select></td>
-                        <td class="p-2"><input id="d-qty" type="number" value="1" oninput="calculateDraft()" class="w-full text-center font-bold"></td>
-                        <td class="p-2"><input id="d-price" type="number" value="0" oninput="calculateDraft()" class="w-full text-right font-bold text-indigo-700"></td>
-                        <td id="d-total" class="p-4 text-right font-black text-indigo-900 text-lg">0</td>
-                        <td></td>
+                        <td class="p-2"><select id="d-unit" class="w-full"><option>式</option><option>坪</option><option>組</option></select></td>
+                        <td class="p-2"><input id="d-qty" type="number" value="1" oninput="calculateDraft()" class="w-full text-center"></td>
+                        <td class="p-2"><input id="d-price" type="number" value="0" oninput="calculateDraft()" class="w-full text-right text-indigo-700 font-bold"></td>
+                        <td id="d-total" class="p-4 text-right font-black text-indigo-900">0</td>
                     </tr>
                 </tbody>
             </table>
         </div>
 
-        <div class="bg-slate-50 p-8 md:p-10 border-t border-slate-200 flex flex-col lg:flex-row justify-between gap-12">
+        <div class="bg-slate-50 p-10 border-t border-slate-200 flex justify-between gap-12">
             <div class="flex-1">
-                <div class="flex items-center gap-2 mb-3">
-                    <div class="w-1 h-5 bg-indigo-500 rounded-full"></div>
-                    <h3 class="font-bold text-slate-700 text-sm">計價說明與附註</h3>
-                </div>
-                <textarea id="remarks-input" rows="4" class="w-full text-sm text-slate-500 leading-relaxed bg-white border-slate-200 shadow-sm">1. 本單價含基本施工與料件。
+                <h3 class="font-bold text-slate-700 text-sm mb-3">計價說明與附註</h3>
+                <textarea id="remarks-input" rows="4" class="w-full text-sm bg-white border-slate-200">1. 本單價含基本施工與料件。
 2. 管理費包含現場專業監工與環境維護。
 3. 本報價單自開立日起 15 日內有效。</textarea>
             </div>
-            <div class="w-full lg:w-[480px] space-y-4">
-                <div class="flex justify-between items-center text-slate-500 text-sm"><span>工程小計</span><span id="subtotal" class="font-bold text-slate-700 text-base">0</span></div>
-                <div class="flex justify-between items-center text-slate-500 text-sm">
+            <div class="w-[450px] space-y-4">
+                <div class="flex justify-between"><span>工程小計</span><span id="subtotal" class="font-bold">0</span></div>
+                <div class="flex justify-between">
                     <span>管理維護 (5%)</span>
                     <div class="flex items-center gap-2">
-                        <span id="management-fee" class="font-bold text-slate-700 text-base">0</span>
-                        <button id="toggle-mgt" onclick="toggleOption('mgt')" class="no-print toggle-btn bg-indigo-600 text-white w-8 h-8 rounded-lg shadow">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                        </button>
+                        <span id="management-fee" class="font-bold">0</span>
+                        <button onclick="toggleOption('mgt')" class="no-print toggle-btn bg-indigo-600 text-white p-1 rounded">✕</button>
                     </div>
                 </div>
-                <div class="flex justify-between items-center text-red-400 text-sm">
+                <div class="flex justify-between text-red-500">
                     <span>營業稅 (5%)</span>
                     <div class="flex items-center gap-2">
-                        <span id="tax-fee" class="font-bold text-red-500 text-base">0</span>
-                        <button id="toggle-tax" onclick="toggleOption('tax')" class="no-print toggle-btn bg-indigo-600 text-white w-8 h-8 rounded-lg shadow">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                        </button>
+                        <span id="tax-fee" class="font-bold">0</span>
+                        <button onclick="toggleOption('tax')" class="no-print toggle-btn bg-indigo-600 text-white p-1 rounded">✕</button>
                     </div>
                 </div>
-                <div class="pt-6 border-t-2 border-slate-200 mt-4 flex justify-between items-center">
-                    <span class="text-slate-900 font-black text-2xl">總報價金額</span>
+                <div class="pt-6 border-t-2 border-slate-200 flex justify-between items-center">
+                    <span class="font-black text-2xl">總報價金額</span>
                     <span id="grand-total" class="text-6xl font-black">0</span>
                 </div>
             </div>
@@ -190,27 +146,22 @@
 
         <div class="p-10 grid grid-cols-2 gap-12 bg-white border-t border-slate-100">
             <div>
-                <div class="flex justify-between mb-3"><span class="text-sm font-bold">甲方簽署 (客戶確認)</span><button onclick="clearSig('sig-party-a')" class="no-print text-indigo-600 text-xs font-bold">清除</button></div>
-                <canvas id="sig-party-a" class="sig-canvas rounded-xl shadow-inner"></canvas>
+                <div class="flex justify-between mb-2"><span class="text-sm font-bold">甲方簽署 (客戶確認)</span><button onclick="clearSig('sig-party-a')" class="no-print text-indigo-600 text-xs">清除</button></div>
+                <canvas id="sig-party-a" class="sig-canvas rounded-xl"></canvas>
             </div>
             <div>
-                <div class="flex justify-between mb-3"><span class="text-sm font-bold">乙方簽署 (承包單位)</span><button onclick="clearSig('sig-party-b')" class="no-print text-indigo-600 text-xs font-bold">清除</button></div>
-                <canvas id="sig-party-b" class="sig-canvas rounded-xl shadow-inner"></canvas>
+                <div class="flex justify-between mb-2"><span class="text-sm font-bold">乙方簽署 (承包單位)</span><button onclick="clearSig('sig-party-b')" class="no-print text-indigo-600 text-xs">清除</button></div>
+                <canvas id="sig-party-b" class="sig-canvas rounded-xl"></canvas>
             </div>
         </div>
     </div>
 
-    <button onclick="exportToPDF()" class="export-btn no-print">
-        導出 A4 PDF 報價單
+    <button onclick="exportToPDF()" class="fixed bottom-10 right-10 bg-indigo-600 text-white px-10 py-5 rounded-2xl font-black shadow-2xl no-print hover:scale-105 transition-transform z-[100]">
+        導出正式 PDF 報價單
     </button>
 
     <script>
-        const projectData = {
-            "泥作工程": { "items": ["地板水泥粉光", "牆面水泥粉光", "防水工程"], "prices": [3500, 4500, 2500] },
-            "木作工程": { "items": ["平頂天花板", "造型電視牆"], "prices": [3800, 12000] },
-            "拆除工程": { "items": ["紅磚牆拆除", "廢棄物清運"], "prices": [2500, 9500] }
-        };
-
+        const projectData = { "泥作工程": { "items": ["地板水泥粉光", "牆面水泥粉光", "防水工程"], "prices": [3500, 4500, 2500] } };
         let includeMgt = true; let includeTax = true;
 
         function showMsg(t) { const b = document.getElementById('msg-box'); b.innerText = t; b.style.display = 'block'; setTimeout(() => b.style.display = 'none', 3000); }
@@ -251,61 +202,45 @@
         function commitAndNew() {
             const cat = document.getElementById('d-category').value;
             const item = document.getElementById('d-item').value;
-            if (!cat || !item) return showMsg("請選取完整的類別與項目！");
-
-            const q = document.getElementById('d-qty').value;
-            const p = document.getElementById('d-price').value;
-            const totalVal = Math.round(q * p);
-
-            const row = document.createElement('tr');
-            row.className = "border-b border-slate-100 row-entry transition-colors";
+            if (!cat || !item) return showMsg("請選取類別與項目");
+            const q = document.getElementById('d-qty').value; const p = document.getElementById('d-price').value;
+            const row = document.createElement('tr'); row.className = "border-b border-slate-100";
             row.innerHTML = `
-                <td class="p-4 no-print text-center">●</td>
-                <td class="p-5 font-medium col-cat">${cat}</td>
-                <td class="p-5 font-bold col-floor">${document.getElementById('d-floor').value}</td>
-                <td class="p-5 text-slate-400 col-loc">${document.getElementById('d-location').value}</td>
-                <td class="p-5 font-bold col-desc">${item}</td>
-                <td class="p-5 text-center col-unit">${document.getElementById('d-unit').value}</td>
-                <td class="p-5 text-center font-bold col-qty">${q}</td>
-                <td class="p-5 text-right font-medium col-price">${parseFloat(p).toLocaleString()}</td>
-                <td class="p-5 text-right font-black text-slate-900 col-total row-total" data-val="${totalVal}">${totalVal.toLocaleString()}</td>
-                <td class="p-5 no-print text-center">
-                    <button onclick="this.closest('tr').remove();calculateTotal();" class="text-slate-300 hover:text-red-500">✕</button>
-                </td>
+                <td class="p-5 no-print action-col text-center">●</td>
+                <td class="p-5 font-medium">${cat}</td>
+                <td class="p-5 font-bold">${document.getElementById('d-floor').value}</td>
+                <td class="p-5 text-slate-400">${document.getElementById('d-location').value}</td>
+                <td class="p-5 font-bold">${item}</td>
+                <td class="p-5 text-center">${document.getElementById('d-unit').value}</td>
+                <td class="p-5 text-center font-bold">${q}</td>
+                <td class="p-5 text-right font-medium">${parseFloat(p).toLocaleString()}</td>
+                <td class="p-5 text-right font-black row-total" data-val="${q*p}">${(q*p).toLocaleString()}</td>
             `;
-            document.getElementById('quotation-body').insertBefore(row, document.getElementById('draft-row').nextSibling);
-            calculateTotal();
-            showMsg("已成功新增項目");
-        }
-
-        function toggleOption(type) {
-            if (type === 'mgt') includeMgt = !includeMgt;
-            else includeTax = !includeTax;
-            document.getElementById(`toggle-${type}`).className = (type==='mgt'?includeMgt:includeTax) ? "no-print toggle-btn bg-indigo-600 text-white w-8 h-8 rounded-lg" : "no-print toggle-btn bg-slate-200 text-slate-400 w-8 h-8 rounded-lg";
+            document.getElementById('quotation-body').insertBefore(row, document.getElementById('draft-row'));
             calculateTotal();
         }
 
         function calculateTotal() {
-            let sub = 0;
-            document.querySelectorAll('.row-total').forEach(el => sub += parseFloat(el.dataset.val) || 0);
-            const mgt = includeMgt ? Math.round(sub * 0.05) : 0; 
-            const tax = includeTax ? Math.round((sub + mgt) * 0.05) : 0;
+            let sub = 0; document.querySelectorAll('.row-total').forEach(el => sub += parseFloat(el.dataset.val) || 0);
+            const mgt = includeMgt ? Math.round(sub * 0.05) : 0; const tax = includeTax ? Math.round((sub + mgt) * 0.05) : 0;
             document.getElementById('subtotal').innerText = sub.toLocaleString();
             document.getElementById('management-fee').innerText = mgt.toLocaleString();
             document.getElementById('tax-fee').innerText = tax.toLocaleString();
             document.getElementById('grand-total').innerText = (sub + mgt + tax).toLocaleString();
         }
 
+        // --- 核心 PDF 導出修復邏輯 ---
         async function exportToPDF() {
             const element = document.getElementById('quotation-content');
-            const clientName = document.getElementById('client-name').value || '未命名';
-            showMsg("正在優化比例並生成 PDF...");
+            const clientName = document.getElementById('client-name').value || '客戶';
+            showMsg("正在生成正式 PDF...");
 
-            // 隱藏不必要的元素
-            const noPrint = document.querySelectorAll('.no-print, .toggle-btn, button, #draft-row');
-            noPrint.forEach(el => el.style.setProperty('display', 'none', 'important'));
+            // 1. 深度清潔：手動隱藏所有不應在 PDF 出現的 UI
+            const uiSelectors = '.no-print, .action-col, #draft-row, button, .toggle-btn, .text-indigo-600.text-xs';
+            const uiElements = document.querySelectorAll(uiSelectors);
+            uiElements.forEach(el => el.style.setProperty('display', 'none', 'important'));
 
-            // 鎖定寬度避免截斷
+            // 2. 鎖定 A4 渲染寬度，解決文字擠壓 [cite: 69, 74]
             const originalWidth = element.style.width;
             element.style.width = "1150px";
 
@@ -313,48 +248,37 @@
                 margin: [10, 10, 10, 10],
                 filename: `工程估價單_${clientName}.pdf`,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, windowWidth: 1150 },
+                html2canvas: { scale: 2, useCORS: true, letterRendering: true, windowWidth: 1150 },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
             };
 
             try {
                 await html2pdf().set(opt).from(element).save();
                 showMsg("導出成功！");
+            } catch (e) {
+                showMsg("導出失敗");
             } finally {
-                noPrint.forEach(el => el.style.display = '');
+                // 3. 恢復網頁顯示
+                uiElements.forEach(el => el.style.display = '');
                 element.style.width = originalWidth;
             }
         }
 
         function setupSignatures() {
             ['sig-party-a', 'sig-party-b'].forEach(id => {
-                const canvas = document.getElementById(id);
-                const ctx = canvas.getContext('2d');
-                let drawing = false;
-                const ratio = window.devicePixelRatio || 1;
-                canvas.width = canvas.offsetWidth * ratio; canvas.height = canvas.offsetHeight * ratio;
-                ctx.scale(ratio, ratio);
-                ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.strokeStyle = '#0f172a';
-                const getPos = (e) => {
-                    const rect = canvas.getBoundingClientRect();
-                    const cx = (e.touches ? e.touches[0].clientX : e.clientX);
-                    const cy = (e.touches ? e.touches[0].clientY : e.clientY);
-                    return { x: cx - rect.left, y: cy - rect.top };
-                };
-                canvas.addEventListener('mousedown', (e) => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
-                canvas.addEventListener('mousemove', (e) => { if(!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
-                window.addEventListener('mouseup', () => drawing = false);
-                canvas.addEventListener('touchstart', (e) => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault(); }, {passive:false});
-                canvas.addEventListener('touchmove', (e) => { if(!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); e.preventDefault(); }, {passive:false});
+                const canvas = document.getElementById(id); const ctx = canvas.getContext('2d'); let drawing = false;
+                const ratio = window.devicePixelRatio || 1; canvas.width = canvas.offsetWidth * ratio; canvas.height = canvas.offsetHeight * ratio;
+                ctx.scale(ratio, ratio); ctx.lineWidth = 2.5; ctx.strokeStyle = '#0f172a';
+                const getPos = (e) => { const rect = canvas.getBoundingClientRect(); return { x: (e.touches ? e.touches[0].clientX : e.clientX) - rect.left, y: (e.touches ? e.touches[0].clientY : e.clientY) - rect.top }; };
+                const start = (e) => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); if(e.touches) e.preventDefault(); };
+                const move = (e) => { if(!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); if(e.touches) e.preventDefault(); };
+                canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); window.addEventListener('mouseup', () => drawing = false);
+                canvas.addEventListener('touchstart', start, {passive:false}); canvas.addEventListener('touchmove', move, {passive:false});
             });
         }
 
-        function clearSig(id) { 
-            const canvas = document.getElementById(id);
-            canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-            setupSignatures();
-        }
-
+        function clearSig(id) { const canvas = document.getElementById(id); canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); setupSignatures(); }
+        function toggleOption(t) { if(t==='mgt') includeMgt = !includeMgt; else includeTax = !includeTax; calculateTotal(); }
         window.onload = init;
     </script>
 </body>
