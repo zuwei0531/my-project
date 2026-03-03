@@ -3,305 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>工程估價單系統 - 2026 專業修復版</title>
+    <title>工程估價單系統 - 直向專業版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
 
-        body { font-family: 'Noto Sans TC', sans-serif; -webkit-print-color-adjust: exact !important; }
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+        }
 
-        /* 隱藏數字輸入箭頭 */
-        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        /* 隱藏 Chrome/Safari 的數字輸入箭頭 */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
 
-        /* --- PDF 調節參數區 (CSS) --- */
-        /* 1. 鎖定欄位寬度，防止 PDF 文字斷裂 */
-        .col-cat { width: 140px; }      
-        .col-floor { width: 90px; }     
-        .col-loc { width: 110px; }      
-        .col-desc { min-width: 300px; }  
-        .col-unit { width: 80px; }
-        .col-qty { width: 80px; }
-        .col-price { width: 120px; }
-        .col-total { width: 140px; }
-
-        /* 2. 強制文字不換行 (解決「單 位」問題) */
-        th, td { white-space: nowrap; word-break: keep-all; }
-        .col-desc { white-space: normal; } /* 僅說明欄位允許換行 */
+        /* 針對 A4 直向縮減欄位寬度 */
+        .col-cat { width: 85px; }      
+        .col-floor { width: 65px; }     
+        .col-loc { width: 85px; }      
+        .col-desc { min-width: 140px; }  /* 彈性空間給說明 */
+        .col-unit { width: 55px; }
+        .col-qty { width: 60px; }
+        .col-price { width: 85px; }
+        .col-total { width: 100px; }
 
         select, input, textarea { 
             border: 1px solid #e2e8f0 !important; 
             border-radius: 8px !important; 
-            padding: 8px 12px !important; 
-            font-size: 15px; 
+            padding: 6px 8px !important; 
+            background-color: white; 
             outline: none;
+            font-size: 14px; /* 字體稍微縮小以適應直向 */
+            transition: all 0.2s ease;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            border-color: #6366f1 !important;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         }
 
         .sig-canvas { 
             border: 2px dashed #cbd5e1; 
             background-color: #f8fafc; 
+            cursor: crosshair; 
+            touch-action: none; 
             width: 100%; 
-            height: 140px; 
-            touch-action: none;
-        }
-
-        /* 懸浮導出按鈕樣式 */
-        .export-btn {
-            position: fixed; bottom: 30px; right: 30px;
-            background: #4f46e5; color: white;
-            padding: 16px 32px; border-radius: 16px;
-            font-weight: 900; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3);
-            z-index: 100; transition: all 0.3s;
-        }
-        .export-btn:hover { transform: translateY(-5px); background: #4338ca; }
-
-        @media print {
-            .no-print, .action-col, button, .toggle-btn { display: none !important; }
-            #quotation-content { box-shadow: none !important; border: none !important; width: 100% !important; margin: 0 !important; }
+            height: 120px; 
         }
         
+        /* 針對 PDF 匯出時的專屬樣式微調 */
+        .pdf-exporting {
+            /* 讓整體字體再稍微縮緊一點，防止跑版 */
+            font-size: 13px !important; 
+        }
+        .pdf-exporting .no-print { 
+            display: none !important; 
+        }
+        .pdf-exporting input, .pdf-exporting textarea, .pdf-exporting select { 
+            border: none !important; 
+            background: transparent !important; 
+            padding: 0 !important; 
+            box-shadow: none !important;
+            appearance: none;
+            -webkit-appearance: none;
+            font-weight: bold; /* 匯出時文字加粗增加辨識度 */
+        }
+        .pdf-exporting th, .pdf-exporting td {
+            padding: 8px 4px !important; /* 壓縮表格上下左右留白 */
+        }
+
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; padding: 0 !important; }
+            .bg-slate-800 { background-color: #1e293b !important; -webkit-print-color-adjust: exact; }
+            .text-white { color: white !important; -webkit-print-color-adjust: exact; }
+            #quotation-content { box-shadow: none !important; border: none !important; width: 100% !important; }
+            input, textarea, select { border: none !important; background: transparent !important; padding: 0 !important; }
+            .rounded-xl { border-radius: 0 !important; }
+        }
+
+        .row-entry:hover { background-color: #f8fafc; }
         #msg-box { position: fixed; top: 24px; left: 50%; transform: translateX(-50%); z-index: 9999; display: none; }
+        
+        .toggle-btn {
+            transition: all 0.2s;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+        }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen py-6 md:py-12 text-slate-800">
+<body class="bg-slate-50 min-h-screen py-6 md:py-8 text-slate-800 text-sm">
 
     <div id="msg-box" class="bg-slate-900 text-white px-8 py-3 rounded-xl shadow-2xl font-medium text-sm animate-bounce"></div>
 
-    <div id="quotation-content" class="max-w-7xl mx-auto bg-white shadow-xl rounded-2xl overflow-hidden border border-slate-200">
-        <div class="bg-slate-900 text-white p-8 md:p-10">
-            <div class="flex flex-col md:flex-row justify-between items-start gap-6">
-                <div>
-                    <h1 class="text-4xl font-black tracking-tight mb-1">工程估價單</h1>
-                    <div class="h-1 w-20 bg-indigo-500 rounded-full mb-4"></div>
-                    <p class="text-slate-400 text-xs font-medium uppercase tracking-[0.2em]">Professional Quotation</p>
-                </div>
-                <div class="w-full md:w-auto text-right space-y-2">
-                    <div class="flex md:justify-end items-center gap-3 text-sm">
-                        <span class="text-slate-400 font-medium">報價日期</span>
-                        <input type="date" id="quote-date" class="bg-slate-800 border-none text-white py-1 px-3 rounded-lg">
-                    </div>
-                    <div class="flex md:justify-end items-center gap-3 text-sm">
-                        <span class="text-slate-400 font-medium">單據編號</span>
-                        <input type="text" id="quote-no" value="QT-20260303-01" class="bg-slate-800 border-none text-white py-1 px-3 rounded-lg text-right">
-                    </div>
-                </div>
-            </div>
-
-            <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="space-y-4">
-                    <div class="flex flex-col gap-1">
-                        <label class="text-xs font-bold text-slate-500 uppercase ml-1">客戶名稱</label>
-                        <input type="text" id="client-name" placeholder="請輸入客戶名稱" class="bg-slate-800/50 border-none text-white focus:bg-slate-800">
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <label class="text-xs font-bold text-slate-500 uppercase ml-1">聯絡電話</label>
-                        <input type="text" id="client-phone" placeholder="請輸入聯絡電話" class="bg-slate-800/50 border-none text-white focus:bg-slate-800">
-                    </div>
-                </div>
-                <div class="flex flex-col gap-1">
-                    <label class="text-xs font-bold text-slate-500 uppercase ml-1">施工地點 / 聯絡地址</label>
-                    <textarea id="client-address" rows="3" placeholder="請輸入詳細施工地址" class="bg-slate-800/50 border-none text-white focus:bg-slate-800 h-full resize-none"></textarea>
-                </div>
-            </div>
-        </div>
-
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse min-w-[1100px]">
-                <thead>
-                    <tr class="bg-slate-50 text-slate-600 text-[14px] font-black uppercase border-b border-slate-200">
-                        <th class="p-5 no-print action-col w-16 text-center">操作</th>
-                        <th class="p-5 col-cat">類別</th>
-                        <th class="p-5 col-floor">樓層</th>
-                        <th class="p-5 col-loc">位置</th>
-                        <th class="p-5 col-desc">項目說明</th>
-                        <th class="p-5 col-unit text-center">單位</th>
-                        <th class="p-5 col-qty text-center">數量</th>
-                        <th class="p-5 col-price text-right">單價</th>
-                        <th class="p-5 col-total text-right">金額小計</th>
-                    </tr>
-                </thead>
-                <tbody id="quotation-body">
-                    <tr id="draft-row" class="bg-indigo-50/30 border-b border-indigo-100 no-print">
-                        <td class="p-3 text-center">
-                            <button onclick="commitAndNew()" class="w-10 h-10 bg-indigo-600 text-white rounded-full font-bold shadow-lg flex items-center justify-center mx-auto hover:scale-110 transition-transform">＋</button>
-                        </td>
-                        <td class="p-2"><select id="d-category" onchange="updateSubItems()" class="w-full"></select></td>
-                        <td class="p-2"><select id="d-floor" class="w-full"><option>1樓</option><option>2樓</option><option>3樓</option><option>4樓</option><option>5樓</option><option>B1</option></select></td>
-                        <td class="p-2"><select id="d-location" class="w-full"><option>客廳</option><option>臥室 A</option><option>廚房</option><option>浴室 A</option></select></td>
-                        <td class="p-2"><select id="d-item" onchange="updatePrice()" class="w-full"></select></td>
-                        <td class="p-2"><select id="d-unit" class="w-full"><option>式</option><option>坪</option><option>組</option><option>尺</option></select></td>
-                        <td class="p-2"><input id="d-qty" type="number" value="1" oninput="calculateDraft()" class="w-full text-center font-bold"></td>
-                        <td class="p-2"><input id="d-price" type="number" value="0" oninput="calculateDraft()" class="w-full text-right font-bold text-indigo-700"></td>
-                        <td id="d-total" class="p-4 text-right font-black text-indigo-900 text-lg">0</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="bg-slate-50 p-8 md:p-10 border-t border-slate-200 flex flex-col lg:flex-row justify-between gap-12">
-            <div class="flex-1">
-                <h3 class="font-bold text-slate-700 text-sm mb-3 uppercase">計價說明與附註</h3>
-                <textarea id="remarks-input" rows="4" class="w-full text-sm text-slate-500 bg-white border-slate-200 shadow-sm">1. 本單價含基本施工與料件。
-2. 管理費包含現場專業監工與環境維護。
-3. 本報價單自開立日起 15 日內有效。</textarea>
-            </div>
-            <div class="w-full lg:w-[450px] space-y-4">
-                <div class="flex justify-between items-center text-slate-500"><span>工程小計</span><span id="subtotal" class="font-bold text-slate-700 text-lg">0</span></div>
-                <div class="flex justify-between items-center text-slate-500">
-                    <span>管理維護 (5%)</span>
-                    <div class="flex items-center gap-2">
-                        <span id="management-fee" class="font-bold text-slate-700">0</span>
-                        <button onclick="toggleOption('mgt')" class="no-print toggle-btn bg-indigo-600 text-white p-1 rounded shadow">✕</button>
-                    </div>
-                </div>
-                <div class="flex justify-between items-center text-red-400">
-                    <span>營業稅 (5%)</span>
-                    <div class="flex items-center gap-2">
-                        <span id="tax-fee" class="font-bold text-red-500">0</span>
-                        <button onclick="toggleOption('tax')" class="no-print toggle-btn bg-indigo-600 text-white p-1 rounded shadow">✕</button>
-                    </div>
-                </div>
-                <div class="pt-6 border-t-2 border-slate-200 mt-4 flex justify-between items-center text-black">
-                    <span class="font-black text-2xl">總報價金額</span>
-                    <span id="grand-total" class="text-6xl font-black">0</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="p-10 grid grid-cols-1 md:grid-cols-2 gap-12 bg-white border-t border-slate-100">
-            <div>
-                <div class="flex justify-between mb-3"><span class="text-sm font-bold text-slate-700">甲方簽署 (客戶確認)</span><button onclick="clearSig('sig-party-a')" class="no-print text-indigo-600 text-xs font-bold">清除</button></div>
-                <canvas id="sig-party-a" class="sig-canvas rounded-xl shadow-inner"></canvas>
-            </div>
-            <div>
-                <div class="flex justify-between mb-3"><span class="text-sm font-bold text-slate-700">乙方簽署 (承包單位)</span><button onclick="clearSig('sig-party-b')" class="no-print text-indigo-600 text-xs font-bold">清除</button></div>
-                <canvas id="sig-party-b" class="sig-canvas rounded-xl shadow-inner"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <button onclick="exportToPDF()" class="export-btn no-print">導出正式 A4 PDF 報價單</button>
-
-    <script>
-        const projectData = {
-            "保護工程": { "items": ["公設保護(電梯/走廊)", "室內地坪保護"], "prices": [800, 600] },
-            "拆除工程": { "items": ["紅磚牆拆除", "磁磚剔除", "廢棄物清運"], "prices": [2500, 1800, 9500] },
-            "泥作工程": { "items": ["牆面水泥粉光", "地板水泥粉光", "防水工程"], "prices": [4500, 3500, 2500] }
-        };
-
-        let includeMgt = true; let includeTax = true;
-
-        function showMsg(t) { const b = document.getElementById('msg-box'); b.innerText = t; b.style.display = 'block'; setTimeout(() => b.style.display = 'none', 3000); }
-
-        function init() {
-            document.getElementById('quote-date').valueAsDate = new Date();
-            const cat = document.getElementById('d-category');
-            cat.innerHTML = '<option value="">-- 選取類別 --</option>';
-            Object.keys(projectData).forEach(c => cat.add(new Option(c, c)));
-            setupSignatures();
-            calculateTotal();
-        }
-
-        function updateSubItems() {
-            const cat = document.getElementById('d-category').value;
-            const item = document.getElementById('d-item');
-            item.innerHTML = '<option value="">-- 項目 --</option>';
-            if (projectData[cat]) projectData[cat].items.forEach((it, idx) => {
-                const opt = new Option(it, it); opt.dataset.price = projectData[cat].prices[idx]; item.add(opt);
-            });
-        }
-
-        function updatePrice() {
-            const sel = document.getElementById('d-item'); const opt = sel.options[sel.selectedIndex];
-            if (opt && opt.dataset.price) document.getElementById('d-price').value = opt.dataset.price;
-            calculateDraft();
-        }
-
-        function calculateDraft() {
-            const q = parseFloat(document.getElementById('d-qty').value) || 0; const p = parseFloat(document.getElementById('d-price').value) || 0;
-            document.getElementById('d-total').innerText = Math.round(q * p).toLocaleString();
-        }
-
-        function commitAndNew() {
-            const cat = document.getElementById('d-category').value; const item = document.getElementById('d-item').value;
-            if (!cat || !item) return showMsg("請選取類別與項目");
-            const q = document.getElementById('d-qty').value; const p = document.getElementById('d-price').value;
-            const row = document.createElement('tr'); row.className = "border-b border-slate-100";
-            row.innerHTML = `
-                <td class="p-5 no-print action-col text-center text-indigo-300">●</td>
-                <td class="p-5 font-medium text-slate-700">${cat}</td>
-                <td class="p-5 font-bold text-slate-600">${document.getElementById('d-floor').value}</td>
-                <td class="p-5 text-slate-400 text-sm">${document.getElementById('d-location').value}</td>
-                <td class="p-5 font-bold text-slate-800">${item}</td>
-                <td class="p-5 text-center text-slate-500">${document.getElementById('d-unit').value}</td>
-                <td class="p-5 text-center font-bold text-slate-700">${q}</td>
-                <td class="p-5 text-right font-medium text-slate-600">${parseFloat(p).toLocaleString()}</td>
-                <td class="p-5 text-right font-black text-slate-900 row-total" data-val="${q*p}">${(q*p).toLocaleString()}</td>
-            `;
-            document.getElementById('quotation-body').insertBefore(row, document.getElementById('draft-row'));
-            calculateTotal(); showMsg("已新增項目");
-        }
-
-        function toggleOption(t) { if(t==='mgt') includeMgt = !includeMgt; else includeTax = !includeTax; calculateTotal(); }
-
-        function calculateTotal() {
-            let sub = 0; document.querySelectorAll('.row-total').forEach(el => sub += parseFloat(el.dataset.val) || 0);
-            const mgt = includeMgt ? Math.round(sub * 0.05) : 0; const tax = includeTax ? Math.round((sub + mgt) * 0.05) : 0;
-            document.getElementById('subtotal').innerText = sub.toLocaleString();
-            document.getElementById('management-fee').innerText = mgt.toLocaleString();
-            document.getElementById('tax-fee').innerText = tax.toLocaleString();
-            document.getElementById('grand-total').innerText = (sub + mgt + tax).toLocaleString();
-        }
-
-        // --- 核心導出修復邏輯 ---
-        async function exportToPDF() {
-            const element = document.getElementById('quotation-content');
-            const clientName = document.getElementById('client-name').value || '客戶';
-            showMsg("正在生成專業 A4 PDF...");
-
-            // 1. 深度清潔：物理隱藏 UI
-            const uiSelectors = '.no-print, .action-col, #draft-row, button, .toggle-btn, .text-indigo-600.text-xs';
-            const uiElements = document.querySelectorAll(uiSelectors);
-            uiElements.forEach(el => el.style.setProperty('display', 'none', 'important'));
-
-            // 2. 鎖定虛擬寬度 (調節參數：1300px)
-            const originalWidth = element.style.width;
-            element.style.width = "1300px"; 
-
-            const opt = {
-                margin: [10, 10, 10, 10],
-                filename: `工程估價單_${clientName}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2.5, useCORS: true, letterRendering: true, windowWidth: 1300 },
-                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-            };
-
-            try {
-                await html2pdf().set(opt).from(element).save();
-                showMsg("導出成功！");
-            } finally {
-                uiElements.forEach(el => el.style.display = '');
-                element.style.width = originalWidth;
-            }
-        }
-
-        function setupSignatures() {
-            ['sig-party-a', 'sig-party-b'].forEach(id => {
-                const canvas = document.getElementById(id); const ctx = canvas.getContext('2d'); let drawing = false;
-                const ratio = window.devicePixelRatio || 1; canvas.width = canvas.offsetWidth * ratio; canvas.height = canvas.offsetHeight * ratio;
-                ctx.scale(ratio, ratio); ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.strokeStyle = '#0f172a';
-                const getPos = (e) => { const rect = canvas.getBoundingClientRect(); return { x: (e.touches ? e.touches[0].clientX : e.clientX) - rect.left, y: (e.touches ? e.touches[0].clientY : e.clientY) - rect.top }; };
-                canvas.addEventListener('mousedown', (e) => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
-                canvas.addEventListener('mousemove', (e) => { if(!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
-                window.addEventListener('mouseup', () => drawing = false);
-                canvas.addEventListener('touchstart', (e) => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); e.preventDefault(); }, {passive:false});
-                canvas.addEventListener('touchmove', (e) => { if(!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); e.preventDefault(); }, {passive:false});
-            });
-        }
-
-        function clearSig(id) { const canvas = document.getElementById(id); canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height); setupSignatures(); }
-
-        window.onload = init;
-    </script>
-</body>
-</html>
+    <button onclick="exportToPDF()" class="no-print fixed bottom-8 right-8 bg-indigo-600 text-white px-6 py-3 rounded-full shadow-2xl font-bold hover:bg-indigo-700 hover
