@@ -276,6 +276,9 @@
         // ==========================================
         function exportToPDF() {
             showMsg("正在生成直向 PDF，請稍候...");
+
+            // 加入這行：強制網頁滾動回最頂部，避免截圖產生上方空白偏移 Bug
+            window.scrollTo(0, 0);
             
             const element = document.getElementById('quotation-content');
             const quoteNo = document.getElementById('quote-no').value || 'Quotation';
@@ -432,4 +435,5 @@
     </script>
 </body>
 </html>
+
 
