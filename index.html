@@ -2,334 +2,258 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>專業工程估價單系統 - Vercel 高清版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>專業工程估價單</title>
+    <!-- 引入 Tailwind CSS 進行快速排版與響應式設計 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        /* 避免擠壓的關鍵 CSS */
-        .table-cell-nowrap { white-space: nowrap !important; }
-        .col-min-width { min-width: 80px; }
-        
-        select, input { 
-            border: 1px solid #e2e8f0 !important; 
-            border-radius: 4px !important; 
-            padding: 4px 6px !important; 
-            background-color: white; 
-            outline: none;
+        /* 列印時的專屬樣式，讓輸出 PDF 更美觀 */
+        @media print {
+            body { background-color: white; padding: 0; }
+            .no-print { display: none !important; }
+            .print-border-none { border: none !important; padding: 0 !important; background: transparent !important; }
+            .shadow-lg { box-shadow: none !important; }
+            input, textarea { border: none !important; resize: none; background: transparent !important; color: black !important; outline: none; }
+            /* 強制列印背景顏色 */
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            .max-w-5xl { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
         }
         
-        .sig-canvas { 
-            border: 2px dashed #cbd5e1; 
-            background-color: #f8fafc; 
-            cursor: crosshair; 
-            touch-action: none; 
-            width: 100%; 
-            height: 120px; 
-        }
-
-        /* PDF 導出模式下的修正樣式 */
-        .is-exporting #quotation-content {
-            width: 1100px !important; /* 強制寬度防止擠壓 */
-            padding: 20px !important;
-            box-shadow: none !important;
-        }
-        .is-exporting .no-print, .is-exporting #draft-row { display: none !important; }
-        .is-exporting input, .is-exporting textarea { border: none !important; background: transparent !important; }
-        
-        tr { page-break-inside: avoid !important; }
-        .row-entry:hover { background-color: #f1f5f9; }
+        /* 自定義隱藏滾動條但保持可滾動 */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
-<body class="bg-slate-100 min-h-screen py-4 md:py-8 font-sans text-slate-900">
+<body class="bg-slate-50 p-4 md:p-8 font-sans text-slate-800 min-h-screen">
 
-    <div id="quotation-content" class="max-w-6xl mx-auto bg-white shadow-2xl rounded-xl overflow-hidden border border-slate-200">
-        <!-- 抬頭 -->
-        <div class="bg-slate-800 text-white p-6 md:p-10">
-            <div class="flex justify-between items-start">
-                <div>
-                    <h1 class="text-3xl font-black tracking-tight mb-1">工程估價單</h1>
-                    <div class="h-1 w-20 bg-indigo-500"></div>
-                </div>
-                <div class="text-right text-xs md:text-sm text-slate-400">
-                    <p>報價日期：2026-03-02</p>
-                    <p>估價單號：20260302-01</p>
+    <div class="max-w-5xl mx-auto bg-white p-6 md:p-12 rounded-xl shadow-lg border border-slate-100">
+        
+        <!-- 頂部操作按鈕 (列印時隱藏) -->
+        <div class="flex justify-end mb-6 no-print">
+            <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors duration-200 flex items-center gap-2 shadow-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                列印 / 匯出 PDF
+            </button>
+        </div>
+
+        <!-- 標題與公司資訊 -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 border-b-2 border-slate-200 pb-6 gap-6">
+            <div class="w-full md:w-1/2">
+                <input type="text" value="您的工程公司名稱" class="text-3xl md:text-4xl font-bold text-slate-900 w-full mb-2 bg-transparent focus:bg-slate-50 border-b border-transparent focus:border-slate-300 outline-none transition-colors" placeholder="輸入公司名稱">
+                <textarea rows="3" class="w-full text-sm text-slate-500 bg-transparent focus:bg-slate-50 border border-transparent focus:border-slate-300 rounded outline-none transition-colors" placeholder="輸入公司地址、電話、統編等資訊">地址：台北市信義區測試路123號
+電話：(02) 1234-5678
+統編：12345678</textarea>
+            </div>
+            <div class="w-full md:w-auto text-left md:text-right">
+                <h1 class="text-4xl font-black text-blue-600 tracking-wider mb-2">估價單</h1>
+                <div class="grid grid-cols-[80px_1fr] gap-2 items-center text-sm mt-4">
+                    <span class="text-slate-500 font-medium">單號：</span>
+                    <input type="text" value="QT-20260303-01" class="border-b border-slate-300 focus:border-blue-500 outline-none px-1 text-right print:text-left md:print:text-right w-full">
+                    <span class="text-slate-500 font-medium">日期：</span>
+                    <input type="date" id="currentDate" class="border-b border-slate-300 focus:border-blue-500 outline-none px-1 text-right print:text-left md:print:text-right w-full">
+                    <span class="text-slate-500 font-medium">有效期限：</span>
+                    <input type="text" value="自報價日起 30 天" class="border-b border-slate-300 focus:border-blue-500 outline-none px-1 text-right print:text-left md:print:text-right w-full">
                 </div>
             </div>
-            
-            <div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
-                <div class="space-y-4">
-                    <div class="flex items-center group">
-                        <span class="text-slate-500 w-20 flex-shrink-0 font-bold">專案名稱</span>
-                        <input type="text" id="project-name" placeholder="輸入名稱" class="bg-transparent border-b border-slate-600 focus:border-white outline-none flex-1 text-white py-1">
-                    </div>
-                    <div class="flex items-center group">
-                        <span class="text-slate-500 w-20 flex-shrink-0 font-bold">客戶姓名</span>
-                        <input type="text" id="client-name" placeholder="輸入抬頭" class="bg-transparent border-b border-slate-600 focus:border-white outline-none flex-1 text-white py-1">
-                    </div>
-                </div>
-                <div class="flex items-start group">
-                    <span class="text-slate-500 w-20 flex-shrink-0 font-bold pt-1">施工地址</span>
-                    <textarea id="address" rows="2" placeholder="輸入施工地址" class="bg-transparent border-b border-slate-600 focus:border-white outline-none flex-1 resize-none text-white py-1"></textarea>
-                </div>
+        </header>
+
+        <!-- 客戶資訊與專案名稱 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <div class="bg-slate-50 p-4 rounded-lg print-border-none print:bg-transparent print:p-0">
+                <h3 class="text-sm font-bold text-slate-400 mb-2 uppercase tracking-wider">致 (客戶資訊)</h3>
+                <input type="text" placeholder="客戶公司名稱或姓名" class="w-full font-bold text-lg mb-1 bg-transparent border-b border-transparent focus:border-slate-300 outline-none">
+                <input type="text" placeholder="聯絡人" class="w-full text-sm mb-1 bg-transparent border-b border-transparent focus:border-slate-300 outline-none">
+                <input type="text" placeholder="聯絡電話" class="w-full text-sm mb-1 bg-transparent border-b border-transparent focus:border-slate-300 outline-none">
+            </div>
+            <div class="bg-slate-50 p-4 rounded-lg print-border-none print:bg-transparent print:p-0">
+                <h3 class="text-sm font-bold text-slate-400 mb-2 uppercase tracking-wider">專案資訊</h3>
+                <input type="text" placeholder="輸入專案名稱 (如：辦公室裝潢工程)" class="w-full font-bold text-lg mb-1 bg-transparent border-b border-transparent focus:border-slate-300 outline-none">
+                <input type="text" placeholder="工程地點" class="w-full text-sm mb-1 bg-transparent border-b border-transparent focus:border-slate-300 outline-none">
             </div>
         </div>
 
-        <!-- 表格區域 -->
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
+        <!-- 報價明細表格 -->
+        <div class="mb-8 overflow-x-auto hide-scrollbar">
+            <table class="w-full text-left border-collapse min-w-[700px]">
                 <thead>
-                    <tr class="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase tracking-widest border-b">
-                        <th class="p-4 no-print w-12 text-center">新增</th>
-                        <th class="p-4 table-cell-nowrap">類別</th>
-                        <th class="p-4 table-cell-nowrap">樓層</th>
-                        <th class="p-4 table-cell-nowrap">位置</th>
-                        <th class="p-4 min-w-[200px]">項目說明</th>
-                        <th class="p-4 text-center">單位</th>
-                        <th class="p-4 text-center">數量</th>
-                        <th class="p-4 text-right">單價</th>
-                        <th class="p-4 text-right">小計</th>
-                        <th class="p-4 no-print w-10"></th>
+                    <tr class="bg-slate-800 text-white">
+                        <th class="py-3 px-4 rounded-tl-lg w-12 text-center">#</th>
+                        <th class="py-3 px-4 w-1/3">項目名稱 / 說明</th>
+                        <th class="py-3 px-4 w-24 text-right">數量</th>
+                        <th class="py-3 px-4 w-20 text-center">單位</th>
+                        <th class="py-3 px-4 w-32 text-right">單價</th>
+                        <th class="py-3 px-4 w-32 text-right">金額小計</th>
+                        <th class="py-3 px-4 rounded-tr-lg w-12 text-center no-print"></th>
                     </tr>
                 </thead>
-                <tbody id="quotation-body">
-                    <!-- 錄入列 -->
-                    <tr id="draft-row" class="bg-indigo-50/30 border-b-2 border-indigo-100 no-print">
-                        <td class="p-4 text-center">
-                            <button onclick="commitAndNew()" class="w-9 h-9 bg-indigo-600 text-white rounded-full font-bold shadow-md hover:scale-105 transition-all">+</button>
-                        </td>
-                        <td class="p-2"><select id="d-category" onchange="updateSubItems()" class="w-full text-sm"></select></td>
-                        <td class="p-2"><select id="d-floor" class="w-full text-sm">
-                            <option value="1樓">1樓</option><option value="2樓">2樓</option><option value="3樓">3樓</option><option value="4樓">4樓</option><option value="5樓">5樓</option><option value="6樓">6樓</option><option value="地下室">地下室</option><option value="頂樓">頂樓</option><option value="樓梯間">樓梯間</option><option value="麒麟地">麒麟地</option>
-                        </select></td>
-                        <td class="p-2"><select id="d-location" class="w-full text-sm">
-                            <option value="無">無</option><option value="樓梯間">樓梯間</option><option value="天花板">天花板</option><option value="地板">地板</option><option value="牆面">牆面</option><option value="前">前</option><option value="中">中</option><option value="後">後</option><option value="上">上</option><option value="下">下</option>
-                        </select></td>
-                        <td class="p-2"><select id="d-item" onchange="updatePrice()" class="w-full text-sm"></select></td>
-                        <td class="p-2"><select id="d-unit" class="w-full text-xs">
-                            <option value="坪">坪</option><option value="m²">m²</option><option value="式">式</option><option value="尺">尺</option><option value="組">組</option><option value="車">車</option>
-                        </select></td>
-                        <td class="p-2"><input id="d-qty" type="number" value="1" oninput="calculateDraft()" class="w-full text-center text-sm font-bold"></td>
-                        <td class="p-2"><input id="d-price" type="number" value="0" oninput="calculateDraft()" class="w-full text-right font-bold text-indigo-600 text-sm"></td>
-                        <td id="d-total" class="p-4 text-right font-black text-indigo-700 text-sm italic">0</td>
-                        <td></td>
-                    </tr>
+                <tbody id="itemsTableBody">
+                    <!-- JavaScript 將在這裡動態插入行 -->
                 </tbody>
             </table>
+            
+            <!-- 新增項目按鈕 -->
+            <button onclick="addNewRow()" class="mt-4 text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1 no-print transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                新增一筆項目
+            </button>
         </div>
 
-        <!-- 總計區 -->
-        <div class="bg-slate-50 p-6 md:p-10 border-t flex flex-col md:flex-row justify-between gap-8">
-            <div class="text-[11px] text-slate-400 md:w-1/2">
-                <p class="font-bold text-slate-500 mb-1 uppercase">備註說明 / Notes</p>
-                <p>1. 本報價含基本施工。 2. 管理費含現場監工支出。 3. 不含政府規費、鄰損鑑定。</p>
+        <!-- 總計區塊 -->
+        <div class="flex flex-col md:flex-row justify-between items-start gap-8">
+            <!-- 備註區 -->
+            <div class="w-full md:w-1/2">
+                <h3 class="text-sm font-bold text-slate-400 mb-2 uppercase tracking-wider">條款與備註</h3>
+                <textarea rows="5" class="w-full text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-200 focus:border-blue-500 outline-none resize-y print:bg-transparent print:border-none print:p-0" placeholder="在此輸入付款條件、保固說明或注意事項...">1. 本報價單自開立起 30 日內有效。
+2. 付款條件：簽約訂金 30%，工程進度達一半請款 40%，完工驗收 30%。
+3. 以上報價未含 5% 營業稅 (依下方計算為準)。
+4. 施工期間如遇設計變更，費用將另行報價。</textarea>
             </div>
-            <div class="md:w-80 space-y-3 text-sm">
-                <div class="flex justify-between"><span>工程小計</span><span id="subtotal" class="font-bold text-slate-700">0</span></div>
-                <div class="flex justify-between"><span>管理維護費 (5%)</span><span id="management-fee" class="font-bold text-slate-700">0</span></div>
-                <div class="flex justify-between text-red-500"><span>營業稅 (5%)</span><span id="tax-fee" class="font-bold">0</span></div>
-                <div class="flex justify-between pt-4 border-t-2 border-slate-300 text-xl font-black text-indigo-700">
-                    <span>總報價金額</span>
-                    <span id="grand-total">0</span>
+            
+            <!-- 計算區 -->
+            <div class="w-full md:w-[350px] bg-slate-50 rounded-lg p-6 print-border-none print:bg-transparent print:p-0">
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-slate-600">小計 (Subtotal)</span>
+                    <span class="font-medium text-slate-800">NT$ <span id="subtotalAmount">0</span></span>
+                </div>
+                <div class="flex justify-between items-center mb-4 border-b border-slate-200 pb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="text-slate-600">營業稅 (Tax)</span>
+                        <select id="taxRate" onchange="calculateTotal()" class="text-xs border border-slate-300 rounded px-1 py-0.5 outline-none no-print bg-white">
+                            <option value="0.05">5%</option>
+                            <option value="0">免稅 (0%)</option>
+                        </select>
+                        <span id="printTaxRate" class="text-xs text-slate-500 hidden print:inline">5%</span>
+                    </div>
+                    <span class="font-medium text-slate-800">NT$ <span id="taxAmount">0</span></span>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-lg font-bold text-slate-800">總計 (Total)</span>
+                    <span class="text-2xl font-black text-blue-600">NT$ <span id="totalAmount">0</span></span>
                 </div>
             </div>
         </div>
 
-        <!-- 簽名區 -->
-        <div class="p-8 md:p-12 grid grid-cols-1 md:grid-cols-2 gap-12 bg-white border-t">
-            <div>
-                <div class="flex justify-between items-center mb-1"><span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">甲方簽署 (客戶)</span><button onclick="clearSig('sig-party-a')" class="no-print text-indigo-600 text-[10px] font-bold">清除</button></div>
-                <canvas id="sig-party-a" class="sig-canvas rounded-lg"></canvas>
+        <!-- 簽名欄位 -->
+        <div class="mt-16 pt-8 border-t border-slate-200 grid grid-cols-2 gap-12 no-print print:grid" style="display: none;">
+            <div class="text-center">
+                <div class="border-b border-slate-400 h-16 mb-2"></div>
+                <p class="text-sm text-slate-500">公司簽章</p>
             </div>
-            <div>
-                <div class="flex justify-between items-center mb-1"><span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">乙方簽署 (承包商)</span><button onclick="clearSig('sig-party-b')" class="no-print text-indigo-600 text-[10px] font-bold">清除</button></div>
-                <canvas id="sig-party-b" class="sig-canvas rounded-lg"></canvas>
+            <div class="text-center">
+                <div class="border-b border-slate-400 h-16 mb-2"></div>
+                <p class="text-sm text-slate-500">客戶確認簽章</p>
             </div>
         </div>
-    </div>
-
-    <!-- 按鈕 -->
-    <div class="max-w-6xl mx-auto mt-8 flex flex-wrap justify-end gap-4 px-4 no-print pb-24">
-        <button onclick="exportExcel()" class="bg-emerald-600 text-white px-8 py-3 rounded-lg font-bold shadow hover:bg-emerald-700 transition">導出 Excel</button>
-        <button id="pdf-btn" onclick="exportPDF()" class="bg-indigo-600 text-white px-8 py-3 rounded-lg font-bold shadow hover:bg-indigo-800 transition flex items-center">
-            <span id="pdf-text">導出 PDF (Vercel 優化版)</span>
-            <div id="loader" class="hidden ml-2 animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-        </button>
+        
+        <!-- 列印時才顯示的簽名區塊預設隱藏，使用 css 控制 -->
+        <style>
+            @media print {
+                .print\:grid { display: grid !important; }
+            }
+        </style>
     </div>
 
     <script>
-        const projectData = {
-            "保護工程": { "items": ["公設保護(電梯/走廊)", "室內地坪保護", "家具防塵套件"], "units": ["坪", "式"], "prices": [800, 600, 3500] },
-            "拆除工程": { "items": ["紅磚牆拆除", "磁磚剔除(牆/地)", "天花板拆除", "廢棄物清運費"], "units": ["坪", "車"], "prices": [2500, 1800, 1200, 9500] },
-            "泥作工程": { "items": ["牆面水泥粉光", "防水工程", "地磚舖貼", "牆面砌磚"], "units": ["坪", "m²"], "prices": [4500, 2500, 6500, 5500] },
-            "木作工程": { "items": ["矽酸鈣板平頂天花", "系統櫃(高櫃)", "造型電視牆", "木作隔間牆"], "units": ["坪", "尺"], "prices": [3800, 6500, 12000, 4500] },
-            "油漆工程": { "items": ["全室二底三面漆", "局部批土修補", "造型牆跳色費"], "units": ["坪", "m²"], "prices": [1500, 500, 2500] },
-            "水電工程": { "items": ["開關插座面板更新", "全室電路抽換", "燈具安裝(基本)", "冷熱水管遷移"], "units": ["組", "式", "處"], "prices": [850, 45000, 350, 3500] }
+        // 設定今日日期
+        document.getElementById('currentDate').valueAsDate = new Date();
+
+        // 預設的測試數據
+        let items = [
+            { id: 1, name: '拆除工程', qty: 1, unit: '式', price: 15000 },
+            { id: 2, name: '水電配置管線', qty: 1, unit: '式', price: 28000 },
+            { id: 3, name: '油漆粉刷 (得利乳膠漆)', qty: 35, unit: '坪', price: 1200 }
+        ];
+
+        // 格式化貨幣
+        const formatMoney = (amount) => {
+            return Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
         };
 
-        function init() {
-            const cat = document.getElementById('d-category');
-            cat.innerHTML = '<option value="">類別</option>';
-            Object.keys(projectData).forEach(c => cat.add(new Option(c, c)));
-            setupSignatures();
-        }
+        // 渲染表格內容
+        function renderTable() {
+            const tbody = document.getElementById('itemsTableBody');
+            tbody.innerHTML = '';
 
-        function updateSubItems() {
-            const cat = document.getElementById('d-category').value;
-            const item = document.getElementById('d-item');
-            item.innerHTML = '<option value="">選擇項目</option>';
-            if (projectData[cat]) projectData[cat].items.forEach((it, idx) => {
-                const opt = new Option(it, it);
-                opt.dataset.price = projectData[cat].prices[idx];
-                item.add(opt);
+            items.forEach((item, index) => {
+                const amount = item.qty * item.price;
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-slate-100 hover:bg-slate-50 transition-colors group';
+                
+                tr.innerHTML = `
+                    <td class="py-3 px-4 text-center text-slate-400 text-sm">${index + 1}</td>
+                    <td class="py-3 px-4">
+                        <input type="text" value="${item.name}" onchange="updateItem(${item.id}, 'name', this.value)" class="w-full bg-transparent border-b border-transparent focus:border-slate-300 outline-none text-slate-800" placeholder="輸入項目名稱">
+                    </td>
+                    <td class="py-3 px-4">
+                        <input type="number" value="${item.qty}" min="0" step="any" onchange="updateItem(${item.id}, 'qty', parseFloat(this.value) || 0)" class="w-full bg-transparent border-b border-transparent focus:border-slate-300 outline-none text-right text-slate-800" placeholder="0">
+                    </td>
+                    <td class="py-3 px-4">
+                        <input type="text" value="${item.unit}" onchange="updateItem(${item.id}, 'unit', this.value)" class="w-full bg-transparent border-b border-transparent focus:border-slate-300 outline-none text-center text-slate-800" placeholder="如: 坪, 式">
+                    </td>
+                    <td class="py-3 px-4">
+                        <input type="number" value="${item.price}" min="0" step="any" onchange="updateItem(${item.id}, 'price', parseFloat(this.value) || 0)" class="w-full bg-transparent border-b border-transparent focus:border-slate-300 outline-none text-right text-slate-800" placeholder="0">
+                    </td>
+                    <td class="py-3 px-4 text-right font-medium text-slate-800">
+                        ${formatMoney(amount)}
+                    </td>
+                    <td class="py-3 px-4 text-center no-print">
+                        <button onclick="removeItem(${item.id})" class="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" title="刪除項目">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
             });
-            calculateDraft();
-        }
 
-        function updatePrice() {
-            const sel = document.getElementById('d-item');
-            const opt = sel.options[sel.selectedIndex];
-            if (opt && opt.dataset.price) document.getElementById('d-price').value = opt.dataset.price;
-            calculateDraft();
-        }
-
-        function calculateDraft() {
-            const q = parseFloat(document.getElementById('d-qty').value) || 0;
-            const p = parseFloat(document.getElementById('d-price').value) || 0;
-            document.getElementById('d-total').innerText = (q * p).toLocaleString();
             calculateTotal();
         }
 
-        function commitAndNew() {
-            const cat = document.getElementById('d-category').value;
-            const floor = document.getElementById('d-floor').value;
-            const loc = document.getElementById('d-location').value;
-            const item = document.getElementById('d-item').value;
-            if (!cat || !item) return;
-
-            const q = document.getElementById('d-qty').value;
-            const p = document.getElementById('d-price').value;
-            const u = document.getElementById('d-unit').value;
-            const total = (parseFloat(q) * parseFloat(p)).toLocaleString();
-
-            const row = document.createElement('tr');
-            row.className = "border-b text-sm transition-all hover:bg-slate-50";
-            row.innerHTML = `<td class="p-4 no-print text-center text-slate-300">●</td><td class="p-4 font-bold text-slate-600">${cat}</td><td class="p-4 text-slate-500">${floor}</td><td class="p-4 text-slate-500">${loc}</td><td class="p-4 font-medium text-slate-800">${item}</td><td class="p-4 text-center text-slate-400 text-xs">${u}</td><td class="p-4 text-center font-bold">${q}</td><td class="p-4 text-right text-slate-500">${parseFloat(p).toLocaleString()}</td><td class="p-4 text-right font-black text-indigo-700 row-total">${total}</td><td class="p-4 no-print text-center"><button onclick="this.closest('tr').remove();calculateTotal();" class="text-slate-300 hover:text-red-500 font-bold transition-all">✕</button></td>`;
-            document.getElementById('quotation-body').insertBefore(row, document.getElementById('draft-row').nextSibling);
-            
-            document.getElementById('d-category').value = ""; document.getElementById('d-item').innerHTML = "";
-            document.getElementById('d-qty').value = 1; document.getElementById('d-price').value = 0;
-            calculateDraft();
+        // 新增一行
+        function addNewRow() {
+            const newId = items.length > 0 ? Math.max(...items.map(i => i.id)) + 1 : 1;
+            items.push({ id: newId, name: '', qty: 1, unit: '式', price: 0 });
+            renderTable();
         }
 
-        function calculateTotal() {
-            let sub = 0;
-            document.querySelectorAll('.row-total').forEach(el => sub += parseFloat(el.innerText.replace(/,/g, '')) || 0);
-            const mgt = Math.round(sub * 0.05); const tax = Math.round((sub + mgt) * 0.05);
-            document.getElementById('subtotal').innerText = sub.toLocaleString();
-            document.getElementById('management-fee').innerText = mgt.toLocaleString();
-            document.getElementById('tax-fee').innerText = tax.toLocaleString();
-            document.getElementById('grand-total').innerText = (sub + mgt + tax).toLocaleString();
+        // 刪除一行
+        function removeItem(id) {
+            items = items.filter(item => item.id !== id);
+            renderTable();
         }
 
-        function exportExcel() {
-            const data = [["類別", "樓層", "位置", "項目說明", "單位", "數量", "單價", "小計"]];
-            document.querySelectorAll('#quotation-body tr:not(#draft-row)').forEach(tr => {
-                const tds = tr.querySelectorAll('td');
-                data.push([tds[1].innerText, tds[2].innerText, tds[3].innerText, tds[4].innerText, tds[5].innerText, tds[6].innerText, tds[7].innerText, tds[8].innerText]);
-            });
-            const ws = XLSX.utils.aoa_to_sheet(data);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "估價單");
-            XLSX.writeFile(wb, "工程報價單.xlsx");
-        }
-
-        // --- 核心優化：解決 PDF 擠壓與標題跑位 ---
-        async function exportPDF() {
-            const content = document.getElementById('quotation-content');
-            const btn = document.getElementById('pdf-btn');
-            const text = document.getElementById('pdf-text');
-            const loader = document.getElementById('loader');
-
-            text.innerText = "生成高品質報價單..."; loader.classList.remove('hidden'); btn.disabled = true;
-
-            // 1. 強制重置捲軸並加上 PDF 專用排版類別
-            window.scrollTo(0, 0);
-            document.body.classList.add('is-exporting');
-            
-            // 2. 特殊處理：將 Canvas 簽名轉為高品質圖片，防止導出遺失
-            const sigA = document.getElementById('sig-party-a');
-            const sigB = document.getElementById('sig-party-b');
-            const imgA = document.createElement('img');
-            const imgB = document.createElement('img');
-            imgA.src = sigA.toDataURL('image/png');
-            imgB.src = sigB.toDataURL('image/png');
-            imgA.className = imgB.className = "w-full h-[120px] object-contain border border-slate-100 rounded-lg";
-            
-            const parentA = sigA.parentNode;
-            const parentB = sigB.parentNode;
-            parentA.replaceChild(imgA, sigA);
-            parentB.replaceChild(imgB, sigB);
-
-            const opt = {
-                margin: 0.2,
-                filename: `${document.getElementById('project-name').value || '工程'}_估價單.pdf`,
-                image: { type: 'jpeg', quality: 1.0 },
-                html2canvas: { 
-                    scale: 3, // RTX 3070 效能全開，Scale 3 兼顧高品質與穩定性
-                    useCORS: true, 
-                    scrollY: 0,
-                    scrollX: 0,
-                    windowWidth: 1100 // 強制以寬螢幕視角擷取，解決手機擠壓斷行
-                },
-                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-            };
-
-            try {
-                // 執行生成
-                await html2pdf().set(opt).from(content).save();
-            } catch (err) {
-                console.error(err);
-                alert("PDF 生成失敗");
-            } finally {
-                // 恢復原狀
-                parentA.replaceChild(sigA, imgA);
-                parentB.replaceChild(sigB, imgB);
-                document.body.classList.remove('is-exporting');
-                text.innerText = "導出 PDF 報價單"; loader.classList.add('hidden'); btn.disabled = false;
+        // 更新數據
+        function updateItem(id, field, value) {
+            const item = items.find(i => i.id === id);
+            if (item) {
+                item[field] = value;
+                renderTable(); // 重新渲染以更新小計
             }
         }
 
-        function setupSignatures() {
-            ['sig-party-a', 'sig-party-b'].forEach(id => {
-                const canvas = document.getElementById(id);
-                const ctx = canvas.getContext('2d');
-                let drawing = false;
-                const ratio = window.devicePixelRatio || 1;
-                canvas.width = canvas.offsetWidth * ratio; canvas.height = canvas.offsetHeight * ratio;
-                ctx.scale(ratio, ratio);
-                ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.strokeStyle = '#1e293b';
-                const getPos = (e) => {
-                    const rect = canvas.getBoundingClientRect();
-                    const cx = (e.touches ? e.touches[0].clientX : e.clientX);
-                    const cy = (e.touches ? e.touches[0].clientY : e.clientY);
-                    return { x: cx - rect.left, y: cy - rect.top };
-                };
-                const start = (e) => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); if(e.touches) e.preventDefault(); };
-                const move = (e) => { if(!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); if(e.touches) e.preventDefault(); };
-                canvas.addEventListener('mousedown', start); canvas.addEventListener('mousemove', move); window.addEventListener('mouseup', () => drawing = false);
-                canvas.addEventListener('touchstart', start, {passive:false}); canvas.addEventListener('touchmove', move, {passive:false}); canvas.addEventListener('touchend', () => drawing = false);
-            });
+        // 計算總金額
+        function calculateTotal() {
+            // 計算小計
+            const subtotal = items.reduce((sum, item) => sum + (item.qty * item.price), 0);
+            
+            // 取得稅率
+            const taxRateSelect = document.getElementById('taxRate');
+            const taxRate = parseFloat(taxRateSelect.value);
+            
+            // 同步列印文字的稅率顯示
+            document.getElementById('printTaxRate').innerText = taxRateSelect.options[taxRateSelect.selectedIndex].text;
+
+            // 計算稅額與總計
+            const tax = subtotal * taxRate;
+            const total = subtotal + tax;
+
+            // 更新畫面
+            document.getElementById('subtotalAmount').innerText = formatMoney(subtotal);
+            document.getElementById('taxAmount').innerText = formatMoney(tax);
+            document.getElementById('totalAmount').innerText = formatMoney(total);
         }
-        function clearSig(id) { 
-            const canvas = document.getElementById(id);
-            const ctx = canvas.getContext('2d');
-            const ratio = window.devicePixelRatio || 1;
-            ctx.clearRect(0, 0, canvas.width, canvas.height); 
-            setupSignatures();
-        }
-        window.onload = init;
+
+        // 初始化渲染
+        window.onload = renderTable;
     </script>
 </body>
 </html>
