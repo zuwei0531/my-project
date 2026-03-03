@@ -158,16 +158,17 @@
                         <td class="p-1">
                             <select id="d-floor" class="w-full">
                                <option value="1樓">1F</option><option value="2樓">2F</option><option value="3樓">3F</option> <option value="4樓">4F</option><option value="5樓">5F</option><option value="6樓">6F</option>
-                                <option value="頂樓">頂樓</option>
+                                <option value="頂樓">頂樓</option> <option value="B1">B1</option><option value="無">無</option>
                             </select>
                         </td>
                         <td class="p-1">
                             <select id="d-location" class="w-full">
-                                <option value="客廳">客廳</option><option value="臥室">臥室</option><option value="浴室">浴室</option><option value="廚房">廚房</option><option value="全室">全室</option>
+                                <option value="廚房">廚房</option><option value="客廳">客廳</option><option value="臥室A">臥室A</option><option value="臥室B">臥室B</option><option value="臥室C">臥室C</option>
+                                <option value="浴室A">浴室A</option><option value="浴室B">浴室B</option><option value="浴室C">浴室C</option><option value="樓梯間">樓梯間</option><option value="無">無</option>
                             </select>
                         </td>
                         <td class="p-1"><select id="d-item" onchange="updatePrice()" class="w-full"></select></td>
-                        <td class="p-1"><select id="d-unit" class="w-full"><option value="式">式</option><option value="坪">坪</option><option value="m²">m²</option><option value="口">口</option></select></td>
+                        <td class="p-1"><select id="d-unit" class="w-full"><option value="坪">坪</option><option value="車">車</option></select></td>
                         <td class="p-1"><input id="d-qty" type="number" value="1" oninput="calculateDraft()" class="w-full text-center font-bold"></td>
                         <td class="p-1"><input id="d-price" type="number" value="0" oninput="calculateDraft()" class="w-full text-right font-bold text-indigo-600"></td>
                         <td id="d-total" class="p-2 text-right font-black text-indigo-900">0</td>
@@ -430,6 +431,7 @@
     </script>
 </body>
 </html>
+
 
 
 
