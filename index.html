@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>工程估價單系統 - 直向專業版</title>
+    <title>工程估價單系統 - 專業版 (含優化 Excel 導出)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
 
@@ -14,14 +16,12 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        /* 隱藏 Chrome/Safari 的數字輸入箭頭 */
         input::-webkit-outer-spin-button,
         input::-webkit-inner-spin-button {
             -webkit-appearance: none;
             margin: 0;
         }
 
-        /* 針對 A4 直向優化欄位寬度 */
         .col-cat { width: 90px; }      
         .col-floor { width: 60px; }     
         .col-loc { width: 80px; }      
@@ -55,7 +55,6 @@
             height: 120px; 
         }
         
-        /* PDF 匯出專用調整 */
         .pdf-exporting {
             font-size: 12px !important; 
         }
@@ -72,7 +71,6 @@
             color: #1e293b !important;
         }
 
-        /* 針對使用者要求：特定欄位在導出時顯示為白色 */
         .pdf-exporting #client-name,
         .pdf-exporting #client-phone,
         .pdf-exporting #client-address,
@@ -82,13 +80,12 @@
             -webkit-text-fill-color: white !important;
         }
 
-        /* 修正備註欄位跑掉的問題：在導出時隱藏 textarea，顯示列印專用 div */
         #remarks-print { display: none; }
         .pdf-exporting #remarks-input { display: none !important; }
         .pdf-exporting #remarks-print { 
             display: block !important; 
             min-height: 80px;
-            white-space: pre-wrap; /* 保持換行 */
+            white-space: pre-wrap; 
             word-break: break-all;
         }
 
@@ -105,8 +102,13 @@
 
     <div id="msg-box" class="bg-slate-900 text-white px-8 py-3 rounded-full shadow-2xl font-medium text-sm animate-in fade-in zoom-in duration-300"></div>
 
-    <!-- 功能按鈕區 -->
     <div class="no-print fixed bottom-8 right-8 flex flex-col gap-3 z-50">
+        <button onclick="exportToExcel()" class="bg-emerald-600 text-white px-6 py-3 rounded-full shadow-2xl font-bold hover:bg-emerald-700 hover:-translate-y-1 transition-all flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+            下載 Excel 報表
+        </button>
         <button onclick="exportToPDF()" class="bg-indigo-600 text-white px-6 py-3 rounded-full shadow-2xl font-bold hover:bg-indigo-700 hover:-translate-y-1 transition-all flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
             下載 A4 直向 PDF
@@ -167,7 +169,6 @@
                     </tr>
                 </thead>
                 <tbody id="quotation-body">
-                    <!-- 輸入列 -->
                     <tr id="draft-row" class="bg-indigo-50/50 no-print">
                         <td class="p-2 text-center">
                             <button onclick="commitAndNew()" class="w-8 h-8 bg-indigo-600 text-white rounded-lg shadow-lg hover:bg-indigo-700 flex items-center justify-center mx-auto transition-transform active:scale-90">
@@ -205,12 +206,10 @@
                     <div class="w-1.5 h-4 bg-indigo-500 rounded-full"></div>
                     <h3 class="font-bold text-slate-800 text-sm">計價備註事項 Remarks</h3>
                 </div>
-                <!-- 編輯模式 -->
                 <textarea id="remarks-input" rows="4" class="w-full text-xs text-slate-500 leading-relaxed p-4 bg-white border-slate-200">1. 本單價含基本施工與料件。
 2. 管理費包含現場專業監工、環境保護維護費。
 3. 報價有效期限為 15 天，逾期請重新洽詢。
 4. 確定後請支付 30% 訂金以利安排進場。</textarea>
-                <!-- 導出模式替代容器 -->
                 <div id="remarks-print" class="text-xs text-slate-500 leading-relaxed p-4 bg-white border border-slate-100 rounded-lg"></div>
             </div>
             
@@ -240,7 +239,6 @@
             </div>
         </div>
 
-        <!-- 簽署區 -->
         <div class="p-8 grid grid-cols-2 gap-10 border-t border-slate-100">
             <div>
                 <div class="flex justify-between items-center mb-2">
@@ -282,18 +280,169 @@
             setTimeout(() => b.style.display = 'none', 3000);
         }
 
+        // ===================== EXCEL 導出邏輯優化版 =====================
+        async function exportToExcel() {
+            showMsg("正在優化 Excel 排版並導出...");
+            
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('估價單');
+
+            // 頁面設定：A4 直向，寬度縮放至 1 頁
+            worksheet.pageSetup = {
+                paperSize: 9, // A4
+                orientation: 'portrait',
+                fitToPage: true,
+                fitToWidth: 1,
+                fitToHeight: 0,
+                margins: { left: 0.5, right: 0.5, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 }
+            };
+
+            // 設定欄寬 (依據內容比例)
+            worksheet.columns = [
+                { key: 'category', width: 12 },
+                { key: 'floor', width: 8 },
+                { key: 'location', width: 10 },
+                { key: 'item', width: 32 },
+                { key: 'unit', width: 6 },
+                { key: 'qty', width: 8 },
+                { key: 'price', width: 12 },
+                { key: 'total', width: 15 }
+            ];
+
+            const borderStyle = {
+                top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'}
+            };
+
+            // 1. 標題區
+            worksheet.mergeCells('A1:H2');
+            const titleCell = worksheet.getCell('A1');
+            titleCell.value = '工 程 估 價 單';
+            titleCell.font = { name: 'Noto Sans TC', size: 22, bold: true, color: { argb: 'FFFFFFFF' } };
+            titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } }; // 更深的正黑色
+            titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+
+            // 2. 客戶資訊區 (優化間距與對齊，避免文字重疊)
+            worksheet.addRow([]); // 緩衝行
+            
+            // 資訊列 A: 日期與單號
+            const infoLine1 = worksheet.addRow([' 日期 Date:', document.getElementById('quote-date').value, '', '', '', ' 單號 No:', document.getElementById('quote-no').value, '']);
+            worksheet.mergeCells(`B${infoLine1.number}:D${infoLine1.number}`);
+            worksheet.mergeCells(`G${infoLine1.number}:H${infoLine1.number}`);
+            
+            // 資訊列 B: 客戶與電話
+            const infoLine2 = worksheet.addRow([' 客戶 Client:', document.getElementById('client-name').value || '(未填)', '', '', '', ' 電話 Phone:', document.getElementById('client-phone').value || '(未填)', '']);
+            worksheet.mergeCells(`B${infoLine2.number}:D${infoLine2.number}`);
+            worksheet.mergeCells(`G${infoLine2.number}:H${infoLine2.number}`);
+
+            // 資訊列 C: 地址
+            const infoLine3 = worksheet.addRow([' 地址 Address:', document.getElementById('client-address').value || '(未填)', '', '', '', '', '', '']);
+            worksheet.mergeCells(`B${infoLine3.number}:H${infoLine3.number}`);
+
+            // 設定資訊欄位字體
+            [infoLine1, infoLine2, infoLine3].forEach(row => {
+                row.font = { name: 'Noto Sans TC', size: 12 };
+                row.height = 20;
+            });
+
+            worksheet.addRow([]); // 空行
+
+            // 3. 表格 Header
+            const headerRow = worksheet.addRow(['類別', '樓層', '位置', '項目說明', '單位', '數量', '單價', '小計']);
+            headerRow.height = 25;
+            headerRow.eachCell((cell) => {
+                cell.font = { bold: true, color: { argb: 'FF475569' }, size: 12 };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+                cell.border = borderStyle;
+                cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            });
+
+            // 4. 數據數據
+            const rows = document.querySelectorAll('#quotation-body .row-entry');
+            rows.forEach(tr => {
+                const tds = tr.querySelectorAll('td');
+                const rowData = [
+                    tds[1].innerText,
+                    tds[2].innerText,
+                    tds[3].innerText,
+                    tds[4].innerText,
+                    tds[5].innerText,
+                    parseFloat(tds[6].innerText.replace(/,/g, '')) || 0,
+                    parseFloat(tds[7].innerText.replace(/,/g, '')) || 0,
+                    parseFloat(tds[8].innerText.replace(/,/g, '')) || 0
+                ];
+                const newRow = worksheet.addRow(rowData);
+                newRow.height = 22;
+                newRow.font = { name: 'Noto Sans TC', size: 12 };
+                newRow.eachCell((cell, colNumber) => {
+                    cell.border = borderStyle;
+                    if (colNumber >= 6) {
+                        cell.numFmt = '#,##0';
+                        cell.alignment = { horizontal: 'right', vertical: 'middle' };
+                    } else {
+                        cell.alignment = { horizontal: colNumber === 4 ? 'left' : 'center', vertical: 'middle' };
+                    }
+                });
+            });
+
+            // 5. 結算區 (固定在右側)
+            worksheet.addRow([]);
+            const subtotal = parseFloat(document.getElementById('subtotal').innerText.replace(/,/g, ''));
+            const mgt = parseFloat(document.getElementById('management-fee').innerText.replace(/,/g, ''));
+            const tax = parseFloat(document.getElementById('tax-fee').innerText.replace(/,/g, ''));
+            const grand = parseFloat(document.getElementById('grand-total').innerText.replace(/,/g, ''));
+
+            const calcRows = [
+                ['', '', '', '', '', '', '工程小計 Subtotal:', subtotal],
+                ['', '', '', '', '', '', '管理費 Mgt Fee (5%):', mgt],
+                ['', '', '', '', '', '', '營業稅 Tax (5%):', tax],
+                ['', '', '', '', '', '', '總報價 Grand Total:', grand]
+            ];
+
+            calcRows.forEach((rowData, idx) => {
+                const r = worksheet.addRow(rowData);
+                const labelCell = r.getCell(7);
+                const valCell = r.getCell(8);
+                
+                labelCell.alignment = { horizontal: 'right' };
+                valCell.alignment = { horizontal: 'right' };
+                valCell.numFmt = '#,##0';
+                
+                if (idx === 3) { // 總計加粗變大
+                    valCell.font = { bold: true, size: 16, color: { argb: 'FF4F46E5' } };
+                    labelCell.font = { bold: true, size: 12 };
+                } else {
+                    valCell.font = { bold: true, size: 12 };
+                }
+            });
+
+            // 6. 備註區
+            worksheet.addRow([]);
+            const remarkHeader = worksheet.addRow([' [ 計價備註事項 Remarks ] ']);
+            remarkHeader.font = { bold: true, size: 12, color: { argb: 'FF1E293B' } };
+            
+            const remarks = document.getElementById('remarks-input').value.split('\n');
+            remarks.forEach(txt => {
+                const rr = worksheet.addRow([' ' + txt]);
+                worksheet.mergeCells(`A${rr.number}:H${rr.number}`);
+                rr.font = { size: 11, color: { argb: 'FF64748B' } };
+                rr.height = 18;
+            });
+
+            // 下載檔案
+            const buffer = await workbook.xlsx.writeBuffer();
+            const fileName = (document.getElementById('quote-no').value || 'Quotation') + '.xlsx';
+            saveAs(new Blob([buffer]), fileName);
+            showMsg("Excel 專業直式報表導出成功！");
+        }
+
+        // ===================== 原有 PDF 與 其他邏輯 =====================
         function exportToPDF() {
             showMsg("正在生成直向 A4 PDF...");
             window.scrollTo(0, 0);
-            
-            // 將 textarea 內容同步到列印專用容器，解決 PDF 內容跑掉問題
             document.getElementById('remarks-print').innerText = document.getElementById('remarks-input').value;
-            
             const element = document.getElementById('quotation-content');
             const quoteNo = document.getElementById('quote-no').value || 'Quotation';
-            
             document.body.classList.add('pdf-exporting');
-
             const opt = {
                 margin:       [10, 5, 10, 5],
                 filename:     `${quoteNo}.pdf`,
@@ -301,7 +450,6 @@
                 html2canvas:  { scale: 2, useCORS: true, letterRendering: true }, 
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' } 
             };
-
             html2pdf().set(opt).from(element).save().then(() => {
                 document.body.classList.remove('pdf-exporting');
                 showMsg("下載成功！");
@@ -356,7 +504,6 @@
 
             const row = document.createElement('tr');
             row.className = "border-b border-slate-50 row-entry group text-[13px] animate-in slide-in-from-left duration-300";
-            
             row.innerHTML = `
                 <td class="p-3 no-print text-center">
                     <div class="w-1 h-4 bg-slate-200 rounded-full mx-auto group-hover:bg-indigo-400 transition-colors"></div>
@@ -376,8 +523,6 @@
                 </td>
             `;
             document.getElementById('quotation-body').insertBefore(row, document.getElementById('draft-row').nextSibling);
-            
-            // 重置
             document.getElementById('d-category').value = ""; document.getElementById('d-item').innerHTML = "";
             document.getElementById('d-qty').value = 1; document.getElementById('d-price').value = 0;
             calculateDraft(); calculateTotal();
@@ -386,13 +531,10 @@
         function calculateTotal() {
             let sub = 0;
             document.querySelectorAll('.row-total').forEach(el => sub += parseFloat(el.dataset.val) || 0);
-            
             const useMgt = document.getElementById('check-mgt').checked;
             const useTax = document.getElementById('check-tax').checked;
-            
             const mgt = useMgt ? Math.round(sub * 0.05) : 0; 
             const tax = useTax ? Math.round((sub + mgt) * 0.05) : 0;
-            
             document.getElementById('subtotal').innerText = sub.toLocaleString();
             document.getElementById('management-fee').innerText = mgt.toLocaleString();
             document.getElementById('tax-fee').innerText = tax.toLocaleString();
@@ -402,24 +544,20 @@
         function setupSignatures() {
             ['sig-party-a', 'sig-party-b'].forEach(id => {
                 const canvas = document.getElementById(id);
+                if (!canvas) return;
                 const ctx = canvas.getContext('2d');
                 let drawing = false;
-                
-                // 處理高解析度螢幕
                 const ratio = window.devicePixelRatio || 1;
                 canvas.width = canvas.offsetWidth * ratio; 
                 canvas.height = canvas.offsetHeight * ratio;
                 ctx.scale(ratio, ratio);
-                
                 ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.strokeStyle = '#0f172a';
-                
                 const getPos = (e) => {
                     const rect = canvas.getBoundingClientRect();
                     const cx = (e.touches ? e.touches[0].clientX : e.clientX);
                     const cy = (e.touches ? e.touches[0].clientY : e.clientY);
                     return { x: cx - rect.left, y: cy - rect.top };
                 };
-                
                 const start = (e) => { 
                     drawing = true; 
                     const p = getPos(e); 
@@ -427,7 +565,6 @@
                     ctx.moveTo(p.x, p.y); 
                     if(e.touches) e.preventDefault(); 
                 };
-                
                 const move = (e) => { 
                     if(!drawing) return; 
                     const p = getPos(e); 
@@ -435,11 +572,9 @@
                     ctx.stroke(); 
                     if(e.touches) e.preventDefault(); 
                 };
-                
                 canvas.addEventListener('mousedown', start);
                 canvas.addEventListener('mousemove', move);
                 window.addEventListener('mouseup', () => drawing = false);
-                
                 canvas.addEventListener('touchstart', start, {passive:false});
                 canvas.addEventListener('touchmove', move, {passive:false});
                 canvas.addEventListener('touchend', () => drawing = false);
