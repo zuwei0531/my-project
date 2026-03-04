@@ -72,6 +72,26 @@
             color: #1e293b !important;
         }
 
+        /* 針對使用者要求：特定欄位在導出時顯示為白色 */
+        .pdf-exporting #client-name,
+        .pdf-exporting #client-phone,
+        .pdf-exporting #client-address,
+        .pdf-exporting #quote-date,
+        .pdf-exporting #quote-no {
+            color: white !important;
+            -webkit-text-fill-color: white !important;
+        }
+
+        /* 修正備註欄位跑掉的問題：在導出時隱藏 textarea，顯示列印專用 div */
+        #remarks-print { display: none; }
+        .pdf-exporting #remarks-input { display: none !important; }
+        .pdf-exporting #remarks-print { 
+            display: block !important; 
+            min-height: 80px;
+            white-space: pre-wrap; /* 保持換行 */
+            word-break: break-all;
+        }
+
         @media print {
             .no-print { display: none !important; }
             body { background: white !important; padding: 0 !important; }
@@ -168,7 +188,7 @@
                             </select>
                         </td>
                         <td class="p-1"><select id="d-item" onchange="updatePrice()" class="w-full"></select></td>
-                        <td class="p-1"><select id="d-unit" class="w-full"><option value="坪">坪</option><option value="車">車</option></select></td>
+                        <td class="p-1"><select id="d-unit" class="w-full"><option value="坪">坪</option><option value="車">車</option><option value="式">式</option></select></td>
                         <td class="p-1"><input id="d-qty" type="number" value="1" oninput="calculateDraft()" class="w-full text-center font-bold"></td>
                         <td class="p-1"><input id="d-price" type="number" value="0" oninput="calculateDraft()" class="w-full text-right font-bold text-indigo-600"></td>
                         <td id="d-total" class="p-2 text-right font-black text-indigo-900">0</td>
@@ -180,18 +200,21 @@
 
         <!-- 結算區 -->
         <div class="p-8 bg-slate-50 border-t border-slate-100 flex flex-col md:flex-row justify-between gap-8">
-            <div class="flex-1">
+            <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-3">
                     <div class="w-1.5 h-4 bg-indigo-500 rounded-full"></div>
                     <h3 class="font-bold text-slate-800 text-sm">計價備註事項 Remarks</h3>
                 </div>
+                <!-- 編輯模式 -->
                 <textarea id="remarks-input" rows="4" class="w-full text-xs text-slate-500 leading-relaxed p-4 bg-white border-slate-200">1. 本單價含基本施工與料件。
 2. 管理費包含現場專業監工、環境保護維護費。
 3. 報價有效期限為 15 天，逾期請重新洽詢。
 4. 確定後請支付 30% 訂金以利安排進場。</textarea>
+                <!-- 導出模式替代容器 -->
+                <div id="remarks-print" class="text-xs text-slate-500 leading-relaxed p-4 bg-white border border-slate-100 rounded-lg"></div>
             </div>
             
-            <div class="w-full md:w-72 space-y-3">
+            <div class="w-full md:w-72 flex-shrink-0 space-y-3">
                 <div class="flex justify-between items-center text-slate-500 text-sm">
                     <span>工程小計 Subtotal</span>
                     <span id="subtotal" class="font-bold text-slate-800 text-base">0</span>
@@ -262,6 +285,9 @@
         function exportToPDF() {
             showMsg("正在生成直向 A4 PDF...");
             window.scrollTo(0, 0);
+            
+            // 將 textarea 內容同步到列印專用容器，解決 PDF 內容跑掉問題
+            document.getElementById('remarks-print').innerText = document.getElementById('remarks-input').value;
             
             const element = document.getElementById('quotation-content');
             const quoteNo = document.getElementById('quote-no').value || 'Quotation';
@@ -431,8 +457,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
